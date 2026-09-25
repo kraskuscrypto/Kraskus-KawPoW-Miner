@@ -10,7 +10,7 @@ Upstream's own notes are in `docs/BUILD.md`; this file is the authoritative proc
 | Compiler | GCC 11–13 (CUDA 12.4 supports up to GCC 13; newer hosts pass `-allow-unsupported-compiler`) | MSVC 2022 (v143) |
 | CUDA toolkit | 12.4 for `sm_61…sm_90` (+PTX); **12.8 or newer for native `sm_100`/`sm_120`** | same |
 | CMake | >= 3.24 (CMake 4.x works with `CMAKE_POLICY_VERSION_MINIMUM=3.5` exported for the vendored cable modules and the fetched dependencies) | same |
-| Boost | >= 1.74, static: `system`, `filesystem`, `thread` plus headers (asio, algorithm, lexical_cast, bind, lockfree, dll, smart_ptr, process, multiprecision, format, exception, array). From a prefix (`BOOST_ROOT`), a package manager (vcpkg toolchain) or the distribution. | vcpkg `x64-windows-static` ports (see CI) |
+| Boost | 1.74 – 1.86, static (1.87+ removed the deprecated Asio APIs `strand::wrap`, `io_service`, `resolver::iterator` still used by the pool clients; porting them is a pending item): `system`, `filesystem`, `thread` plus headers (asio, algorithm, lexical_cast, bind, lockfree, dll, smart_ptr, process, multiprecision, format, exception, array). From a prefix (`BOOST_ROOT`), a package manager (vcpkg toolchain) or the distribution. | vcpkg `x64-windows-static` ports (see CI) |
 | ethash (RavenCommunity/cpp-kawpow), jsoncpp, CLI11 | fetched by CMake (`cmake/KraskusDependencies.cmake`) at upstream's pinned versions **cpp-kawpow 1.1.0 (the KawPoW-patched ethash) / 1.8.4 / 1.8.0** | same |
 | OpenSSL | development package (stratum+ssl) | vcpkg `openssl` |
 
@@ -40,7 +40,9 @@ From a "x64 Native Tools Command Prompt for VS 2022":
 
 ```bat
 set CMAKE_POLICY_VERSION_MINIMUM=3.5
-vcpkg install --triplet x64-windows-static boost-system boost-filesystem boost-thread boost-asio boost-algorithm boost-lexical-cast boost-bind boost-lockfree boost-dll boost-smart-ptr boost-process boost-multiprecision boost-format boost-exception boost-array boost-throw-exception openssl
+git clone https://github.com/microsoft/vcpkg.git %USERPROFILE%\vcpkg && git -C %USERPROFILE%\vcpkg checkout b2cb0da531c2f1f740045bfe7c4dac59f0b2b69c && %USERPROFILE%\vcpkg\bootstrap-vcpkg.bat -disableMetrics
+set VCPKG_ROOT=%USERPROFILE%\vcpkg
+rem vcpkg.json (manifest mode) pins the baseline: Boost 1.86.0 + OpenSSL 3.4.0 are built into build\vcpkg_installed during configure
 cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DETHASHCUDA=ON -DETHASHCL=OFF -DAPICORE=ON ^
       -DCMAKE_TOOLCHAIN_FILE=%VCPKG_ROOT%\scripts\buildsystems\vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static
 cmake --build build --config Release --parallel

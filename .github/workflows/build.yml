@@ -68,13 +68,16 @@ jobs:
           cuda: "12.8.0"
           method: network
           sub-packages: '["nvcc", "cudart", "nvrtc", "nvrtc_dev", "visual_studio_integration"]'
-      - name: boost and openssl (vcpkg, static)
+      - name: vcpkg at the pinned baseline (Boost 1.86, see vcpkg.json)
         shell: pwsh
         run: |
-          & "$env:VCPKG_INSTALLATION_ROOT\vcpkg.exe" install --triplet x64-windows-static boost-system boost-filesystem boost-thread boost-asio boost-algorithm boost-lexical-cast boost-bind boost-lockfree boost-dll boost-smart-ptr boost-process boost-multiprecision boost-format boost-exception boost-array boost-throw-exception openssl
-      - name: configure
+          git clone --quiet https://github.com/microsoft/vcpkg.git $env:RUNNER_TEMP/vcpkg
+          git -C $env:RUNNER_TEMP/vcpkg checkout --quiet b2cb0da531c2f1f740045bfe7c4dac59f0b2b69c
+          & "$env:RUNNER_TEMP/vcpkg/bootstrap-vcpkg.bat" -disableMetrics
+          "VCPKG_ROOT=$env:RUNNER_TEMP/vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Append
+      - name: configure (vcpkg manifest mode installs the dependencies)
         shell: cmd
-        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DETHASHCUDA=ON -DETHASHCL=OFF -DAPICORE=ON -DCMAKE_TOOLCHAIN_FILE=%VCPKG_INSTALLATION_ROOT%\scripts\buildsystems\vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DETHASHCUDA=ON -DETHASHCL=OFF -DAPICORE=ON -DCMAKE_TOOLCHAIN_FILE=%VCPKG_ROOT%\scripts\buildsystems\vcpkg.cmake -DVCPKG_TARGET_TRIPLET=x64-windows-static
       - name: build
         shell: cmd
         run: cmake --build build --config Release --parallel
