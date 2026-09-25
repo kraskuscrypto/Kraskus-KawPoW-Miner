@@ -11,7 +11,7 @@ Upstream's own notes are in `docs/BUILD.md`; this file is the authoritative proc
 | CUDA toolkit | 12.4 for `sm_61…sm_90` (+PTX); **12.8 or newer for native `sm_100`/`sm_120`** | same |
 | CMake | >= 3.24 (CMake 4.x works with `CMAKE_POLICY_VERSION_MINIMUM=3.5` exported for the vendored cable modules and the fetched dependencies) | same |
 | Boost | >= 1.74, static: `system`, `filesystem`, `thread` plus headers (asio, algorithm, lexical_cast, bind, lockfree, dll, smart_ptr, process, multiprecision, format, exception, array). From a prefix (`BOOST_ROOT`), a package manager (vcpkg toolchain) or the distribution. | vcpkg `x64-windows-static` ports (see CI) |
-| ethash, jsoncpp, CLI11 | fetched by CMake (`cmake/KraskusDependencies.cmake`) at upstream's pinned versions **0.5.0 / 1.8.4 / 1.8.0** | same |
+| ethash (RavenCommunity/cpp-kawpow), jsoncpp, CLI11 | fetched by CMake (`cmake/KraskusDependencies.cmake`) at upstream's pinned versions **cpp-kawpow 1.1.0 (the KawPoW-patched ethash) / 1.8.4 / 1.8.0** | same |
 | OpenSSL | development package (stratum+ssl) | vcpkg `openssl` |
 
 Hunter (upstream's package manager) is no longer used: its pinned Boost 1.70 does not compile with current compilers.

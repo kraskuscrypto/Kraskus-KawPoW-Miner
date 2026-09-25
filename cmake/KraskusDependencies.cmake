@@ -2,8 +2,8 @@
 #
 # Boost: from BOOST_ROOT / Boost_ROOT (a prefix built with docs/KRASKUS-BUILD.md), a package
 #        manager (vcpkg toolchain file) or the system. 1.74 or newer.
-# ethash, jsoncpp, CLI11: fetched by CMake at the exact versions upstream pinned through Hunter
-#        (ethash 0.5.0, jsoncpp 1.8.4, CLI11 1.8.0) so behaviour matches upstream 1.2.4; each is
+# ethash (= cpp-kawpow 1.1.0), jsoncpp, CLI11: fetched by CMake at the exact versions upstream
+#        pinned through Hunter (cpp-kawpow 1.1.0, jsoncpp 1.8.4, CLI11 1.8.0) so behaviour matches upstream 1.2.4; each is
 #        pinned to a commit for reproducibility.
 
 set(Boost_USE_STATIC_LIBS ON)
@@ -22,14 +22,17 @@ message("-- Boost ${Boost_VERSION} from ${Boost_INCLUDE_DIRS}")
 include(FetchContent)
 set(FETCHCONTENT_QUIET OFF)
 
-# ethash 0.5.0 (chfast/ethash tag v0.5.0): ethash::ethash, ethash::keccak
+# ethash = RavenCommunity/cpp-kawpow 1.1.0: chfast's ethash patched with the KawPoW constants
+# (ProgPoW period 3, epoch length 7500, ...). This is exactly what upstream kawpowminer pinned
+# through its local Hunter config (cmake/Hunter/config.cmake); the plain chfast ethash makes the
+# CPU verifier disagree with the GPU ("GPU gave incorrect result"). Provides ethash::ethash,
+# ethash::keccak, and <ethash/progpow.hpp>.
 set(ETHASH_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(ETHASH_INSTALL_CMAKE_CONFIG OFF CACHE BOOL "" FORCE)
 set(HUNTER_ENABLED OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(ethash
-	GIT_REPOSITORY https://github.com/chfast/ethash.git
-	GIT_TAG        v0.5.0
-	GIT_SHALLOW    TRUE)
+	URL      https://github.com/RavenCommunity/cpp-kawpow/archive/1.1.0.tar.gz
+	URL_HASH SHA1=fff78f555a43900b6726c131305a71be769ef769)
 
 # jsoncpp 1.8.4: jsoncpp_lib_static
 set(JSONCPP_WITH_TESTS OFF CACHE BOOL "" FORCE)
