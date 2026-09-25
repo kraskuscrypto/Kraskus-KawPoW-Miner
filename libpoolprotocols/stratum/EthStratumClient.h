@@ -1,5 +1,8 @@
 #pragma once
 
+#include <boost/asio/bind_executor.hpp>
+#include <boost/asio/post.hpp>
+#include <boost/asio/strand.hpp>
 #include <iostream>
 
 #include <boost/array.hpp>
@@ -90,7 +93,7 @@ private:
     std::chrono::milliseconds dequeue_response_plea();
     void clear_response_pleas();
     void resolve_handler(
-        const boost::system::error_code& ec, boost::asio::ip::tcp::resolver::iterator i);
+        const boost::system::error_code& ec, boost::asio::ip::tcp::resolver::results_type results);
     void start_connect();
     void connect_handler(const boost::system::error_code& ec);
     void workloop_timer_elapsed(const boost::system::error_code& ec);
@@ -123,8 +126,8 @@ private:
     WorkPackage m_current;
     std::chrono::time_point<std::chrono::steady_clock> m_current_timestamp;
 
-    boost::asio::io_service& m_io_service;  // The IO service reference passed in the constructor
-    boost::asio::io_service::strand m_io_strand;
+    boost::asio::io_context& m_io_service;  // The IO service reference passed in the constructor
+    boost::asio::strand<boost::asio::io_context::executor_type> m_io_strand;
     boost::asio::ip::tcp::socket* m_socket;
     std::string m_message;  // The internal message string buffer
     bool m_newjobprocessed = false;

@@ -1,3 +1,6 @@
+#include <boost/asio/bind_executor.hpp>
+#include <boost/asio/post.hpp>
+#include <boost/asio/strand.hpp>
 #include <chrono>
 
 #include "PoolManager.h"
@@ -11,7 +14,7 @@ PoolManager* PoolManager::m_this = nullptr;
 
 PoolManager::PoolManager(PoolSettings _settings)
   : m_Settings(std::move(_settings)),
-    m_io_strand(g_io_service),
+    m_io_strand(g_io_service.get_executor()),
     m_failovertimer(g_io_service),
     m_submithrtimer(g_io_service)
 {
@@ -82,7 +85,7 @@ void PoolManager::setClientHandlers()
             {
                 m_failovertimer.expires_from_now(
                     boost::posix_time::minutes(m_Settings.poolFailoverTimeout));
-                m_failovertimer.async_wait(m_io_strand.wrap(boost::bind(
+                m_failovertimer.async_wait(boost::asio::bind_executor(m_io_strand, boost::bind(
                     &PoolManager::failovertimer_elapsed, this, boost::asio::placeholders::error)));
             }
             else
@@ -106,7 +109,7 @@ void PoolManager::setClientHandlers()
         if (m_Settings.reportHashrate)
         {
             m_submithrtimer.expires_from_now(boost::posix_time::seconds(m_Settings.hashRateInterval));
-            m_submithrtimer.async_wait(m_io_strand.wrap(boost::bind(
+            m_submithrtimer.async_wait(boost::asio::bind_executor(m_io_strand, boost::bind(
                 &PoolManager::submithrtimer_elapsed, this, boost::asio::placeholders::error)));
         }
 
@@ -143,7 +146,7 @@ void PoolManager::setClientHandlers()
             // Suspend mining and submit new connection request
             cnote << "No connection. Suspend mining ...";
             Farm::f().pause();
-            g_io_service.post(m_io_strand.wrap(boost::bind(&PoolManager::rotateConnect, this)));
+            boost::asio::post(g_io_service, boost::asio::bind_executor(m_io_strand, boost::bind(&PoolManager::rotateConnect, this)));
         }
     });
 
@@ -366,7 +369,7 @@ void PoolManager::start()
     m_running.store(true, std::memory_order_relaxed);
     m_async_pending.store(true, std::memory_order_relaxed);
     m_connectionSwitches.fetch_add(1, std::memory_order_relaxed);
-    g_io_service.post(m_io_strand.wrap(boost::bind(&PoolManager::rotateConnect, this)));
+    boost::asio::post(g_io_service, boost::asio::bind_executor(m_io_strand, boost::bind(&PoolManager::rotateConnect, this)));
 }
 
 void PoolManager::rotateConnect()
@@ -501,7 +504,7 @@ void PoolManager::submithrtimer_elapsed(const boost::system::error_code& ec)
 
             // Resubmit actor
             m_submithrtimer.expires_from_now(boost::posix_time::seconds(m_Settings.hashRateInterval));
-            m_submithrtimer.async_wait(m_io_strand.wrap(boost::bind(
+            m_submithrtimer.async_wait(boost::asio::bind_executor(m_io_strand, boost::bind(
                 &PoolManager::submithrtimer_elapsed, this, boost::asio::placeholders::error)));
         }
     }

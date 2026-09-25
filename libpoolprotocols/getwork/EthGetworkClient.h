@@ -1,5 +1,8 @@
 #pragma once
 
+#include <boost/asio/bind_executor.hpp>
+#include <boost/asio/post.hpp>
+#include <boost/asio/strand.hpp>
 #include <iostream>
 #include <string>
 
@@ -33,7 +36,7 @@ private:
 
     void begin_connect();
     void handle_resolve(
-        const boost::system::error_code& ec, boost::asio::ip::tcp::resolver::iterator i);
+        const boost::system::error_code& ec, boost::asio::ip::tcp::resolver::results_type results);
     void handle_connect(const boost::system::error_code& ec);
     void handle_write(const boost::system::error_code& ec);
     void handle_read(const boost::system::error_code& ec, std::size_t bytes_transferred);
@@ -49,7 +52,7 @@ private:
     std::atomic<bool> m_txPending = {false};  // Whether or not an async socket operation is pending
     boost::lockfree::queue<std::string*> m_txQueue;
 
-    boost::asio::io_service::strand m_io_strand;
+    boost::asio::strand<boost::asio::io_context::executor_type> m_io_strand;
 
     boost::asio::ip::tcp::socket m_socket;
     boost::asio::ip::tcp::resolver m_resolver;

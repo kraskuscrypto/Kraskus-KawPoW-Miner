@@ -1,3 +1,6 @@
+#include <boost/asio/bind_executor.hpp>
+#include <boost/asio/post.hpp>
+#include <boost/asio/strand.hpp>
 #include "EthGetworkClient.h"
 
 #include <chrono>
@@ -15,7 +18,7 @@ using boost::asio::ip::tcp;
 EthGetworkClient::EthGetworkClient(int worktimeout, unsigned farmRecheckPeriod)
   : PoolClient(),
     m_farmRecheckPeriod(farmRecheckPeriod),
-    m_io_strand(g_io_service),
+    m_io_strand(g_io_service.get_executor()),
     m_socket(g_io_service),
     m_resolver(g_io_service),
     m_endpoints(),
@@ -59,12 +62,11 @@ void EthGetworkClient::connect()
         // calling the resolver each time is useful as most
         // load balancers will give Ips in different order
         m_resolver = boost::asio::ip::tcp::resolver(g_io_service);
-        boost::asio::ip::tcp::resolver::query q(m_conn->Host(), toString(m_conn->Port()));
 
-        // Start resolving async
-        m_resolver.async_resolve(
-            q, m_io_strand.wrap(boost::bind(&EthGetworkClient::handle_resolve, this,
-                   boost::asio::placeholders::error, boost::asio::placeholders::iterator)));
+        // Start resolving async (Kraskus fork: results_type API, Boost >= 1.66 / required by 1.87)
+        m_resolver.async_resolve(m_conn->Host(), toString(m_conn->Port()),
+            boost::asio::bind_executor(m_io_strand, boost::bind(&EthGetworkClient::handle_resolve, this,
+                   boost::asio::placeholders::error, boost::asio::placeholders::results)));
     }
     else
     {
@@ -102,7 +104,7 @@ void EthGetworkClient::begin_connect()
         // Eventually endpoints get discarded on connection errors
         m_endpoint = m_endpoints.front();
         m_socket.async_connect(
-            m_endpoint, m_io_strand.wrap(boost::bind(&EthGetworkClient::handle_connect, this, _1)));
+            m_endpoint, boost::asio::bind_executor(m_io_strand, boost::bind(&EthGetworkClient::handle_connect, this, _1)));
     }
     else
     {
@@ -168,7 +170,7 @@ void EthGetworkClient::handle_connect(const boost::system::error_code& ec)
                     delete line;
 
                     async_write(m_socket, m_request,
-                        m_io_strand.wrap(boost::bind(&EthGetworkClient::handle_write, this,
+                        boost::asio::bind_executor(m_io_strand, boost::bind(&EthGetworkClient::handle_write, this,
                             boost::asio::placeholders::error)));
                     break;
                 }
@@ -202,7 +204,7 @@ void EthGetworkClient::handle_write(const boost::system::error_code& ec)
         // Transmission succesfully sent.
         // Read the response async. 
         boost::asio::async_read_until(m_socket, m_response, "}",
-            m_io_strand.wrap(boost::bind(&EthGetworkClient::handle_read, this,
+            boost::asio::bind_executor(m_io_strand, boost::bind(&EthGetworkClient::handle_read, this,
                 boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred)));
     }
     else
@@ -348,15 +350,12 @@ void EthGetworkClient::handle_read(
 }
 
 void EthGetworkClient::handle_resolve(
-    const boost::system::error_code& ec, tcp::resolver::iterator i)
+    const boost::system::error_code& ec, tcp::resolver::results_type results)
 {
     if (!ec)
     {
-        while (i != tcp::resolver::iterator())
-        {
-            m_endpoints.push(i->endpoint());
-            i++;
-        }
+        for (auto const& entry : results)
+            m_endpoints.push(entry.endpoint());
         m_resolver.cancel();
 
         // Resolver has finished so invoke connection asynchronously
@@ -406,7 +405,7 @@ void EthGetworkClient::processResponse(Json::Value& JRes)
                   << toString(m_conn->Port());
             m_getwork_timer.expires_from_now(boost::posix_time::seconds(30));
             m_getwork_timer.async_wait(
-                m_io_strand.wrap(boost::bind(&EthGetworkClient::getwork_timer_elapsed, this,
+                boost::asio::bind_executor(m_io_strand, boost::bind(&EthGetworkClient::getwork_timer_elapsed, this,
                     boost::asio::placeholders::error)));
         }
         else
@@ -436,7 +435,7 @@ void EthGetworkClient::processResponse(Json::Value& JRes)
                 }
                 m_getwork_timer.expires_from_now(boost::posix_time::milliseconds(m_farmRecheckPeriod));
                 m_getwork_timer.async_wait(
-                    m_io_strand.wrap(boost::bind(&EthGetworkClient::getwork_timer_elapsed, this,
+                    boost::asio::bind_executor(m_io_strand, boost::bind(&EthGetworkClient::getwork_timer_elapsed, this,
                         boost::asio::placeholders::error)));
             }
         }

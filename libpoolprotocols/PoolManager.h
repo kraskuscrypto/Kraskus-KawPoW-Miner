@@ -1,5 +1,8 @@
 #pragma once
 
+#include <boost/asio/bind_executor.hpp>
+#include <boost/asio/post.hpp>
+#include <boost/asio/strand.hpp>
 #include <iostream>
 
 #include <json/json.h>
@@ -83,7 +86,7 @@ private:
 
     WorkPackage m_currentWp;
 
-    boost::asio::io_service::strand m_io_strand;
+    boost::asio::strand<boost::asio::io_context::executor_type> m_io_strand;
     boost::asio::deadline_timer m_failovertimer;
     boost::asio::deadline_timer m_submithrtimer;
 

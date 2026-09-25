@@ -16,6 +16,9 @@
  */
 
 
+#include <boost/asio/bind_executor.hpp>
+#include <boost/asio/post.hpp>
+#include <boost/asio/strand.hpp>
 #include <libethcore/Farm.h>
 
 #if ETH_ETHASHCL
@@ -42,7 +45,7 @@ Farm::Farm(std::map<std::string, DeviceDescriptor>& _DevicesCollection,
     m_CUSettings(std::move(_CUSettings)),
     m_CLSettings(std::move(_CLSettings)),
     m_CPSettings(std::move(_CPSettings)),
-    m_io_strand(g_io_service),
+    m_io_strand(g_io_service.get_executor()),
     m_collectTimer(g_io_service),
     m_DevicesCollection(_DevicesCollection)
 {
@@ -152,7 +155,7 @@ Farm::Farm(std::map<std::string, DeviceDescriptor>& _DevicesCollection,
     // regardless it's mining state
     m_collectTimer.expires_from_now(boost::posix_time::milliseconds(m_collectInterval));
     m_collectTimer.async_wait(
-        m_io_strand.wrap(boost::bind(&Farm::collectData, this, boost::asio::placeholders::error)));
+        boost::asio::bind_executor(m_io_strand, boost::bind(&Farm::collectData, this, boost::asio::placeholders::error)));
 }
 
 Farm::~Farm()
@@ -370,7 +373,7 @@ void Farm::restart()
  */
 void Farm::restart_async()
 {
-    g_io_service.post(m_io_strand.wrap(boost::bind(&Farm::restart, this)));
+    boost::asio::post(g_io_service, boost::asio::bind_executor(m_io_strand, boost::bind(&Farm::restart, this)));
 }
 
 /**
@@ -473,7 +476,7 @@ void Farm::setTStartTStop(unsigned tstart, unsigned tstop)
 
 void Farm::submitProof(Solution const& _s)
 {
-    g_io_service.post(m_io_strand.wrap(boost::bind(&Farm::submitProofAsync, this, _s)));
+    boost::asio::post(g_io_service, boost::asio::bind_executor(m_io_strand, boost::bind(&Farm::submitProofAsync, this, _s)));
 }
 
 void Farm::submitProofAsync(Solution const& _s)
@@ -644,7 +647,7 @@ void Farm::collectData(const boost::system::error_code& ec)
     // Resubmit timer for another loop
     m_collectTimer.expires_from_now(boost::posix_time::milliseconds(m_collectInterval));
     m_collectTimer.async_wait(
-        m_io_strand.wrap(boost::bind(&Farm::collectData, this, boost::asio::placeholders::error)));
+        boost::asio::bind_executor(m_io_strand, boost::bind(&Farm::collectData, this, boost::asio::placeholders::error)));
 }
 
 bool Farm::spawn_file_in_bin_dir(const char* filename, const std::vector<std::string>& args)

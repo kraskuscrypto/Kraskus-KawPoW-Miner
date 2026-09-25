@@ -17,6 +17,9 @@
 
 #pragma once
 
+#include <boost/asio/bind_executor.hpp>
+#include <boost/asio/post.hpp>
+#include <boost/asio/strand.hpp>
 #include <bitset>
 #include <list>
 #include <numeric>
@@ -37,7 +40,7 @@
 
 using namespace std;
 
-extern boost::asio::io_service g_io_service;
+extern boost::asio::io_context g_io_service;
 
 namespace dev
 {

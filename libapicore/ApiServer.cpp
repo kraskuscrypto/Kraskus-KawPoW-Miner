@@ -1,3 +1,6 @@
+#include <boost/asio/bind_executor.hpp>
+#include <boost/asio/post.hpp>
+#include <boost/asio/strand.hpp>
 #include "ApiServer.h"
 
 #include <kawpowminer/buildinfo.h>
@@ -226,7 +229,7 @@ ApiServer::ApiServer(string address, int portnum, string password)
   : m_password(std::move(password)),
     m_address(address),
     m_acceptor(g_io_service),
-    m_io_strand(g_io_service)
+    m_io_strand(g_io_service.get_executor())
 {
     if (portnum < 0)
     {
@@ -295,7 +298,7 @@ void ApiServer::begin_accept()
     auto session =
         std::make_shared<ApiConnection>(m_io_strand, ++lastSessionId, m_readonly, m_password);
     m_acceptor.async_accept(
-        session->socket(), m_io_strand.wrap(boost::bind(&ApiServer::handle_accept, this, session,
+        session->socket(), boost::asio::bind_executor(m_io_strand, boost::bind(&ApiServer::handle_accept, this, session,
                                boost::asio::placeholders::error)));
 }
 
@@ -351,7 +354,7 @@ void ApiConnection::disconnect()
 }
 
 ApiConnection::ApiConnection(
-    boost::asio::io_service::strand& _strand, int id, bool readonly, string password)
+    boost::asio::strand<boost::asio::io_context::executor_type>& _strand, int id, bool readonly, string password)
   : m_sessionId(id),
     m_socket(g_io_service),
     m_io_strand(_strand),
@@ -747,7 +750,7 @@ void ApiConnection::processRequest(Json::Value& jRequest, Json::Value& jResponse
 void ApiConnection::recvSocketData()
 {
     boost::asio::async_read(m_socket, m_recvBuffer, boost::asio::transfer_at_least(1),
-        m_io_strand.wrap(boost::bind(&ApiConnection::onRecvSocketDataCompleted, this,
+        boost::asio::bind_executor(m_io_strand, boost::bind(&ApiConnection::onRecvSocketDataCompleted, this,
             boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred)));
 }
 
@@ -945,7 +948,7 @@ void ApiConnection::sendSocketData(std::string const& _s, bool _disconnect)
     os << _s;
 
     async_write(m_socket, m_sendBuffer,
-        m_io_strand.wrap(boost::bind(&ApiConnection::onSendSocketDataCompleted, this,
+        boost::asio::bind_executor(m_io_strand, boost::bind(&ApiConnection::onSendSocketDataCompleted, this,
             boost::asio::placeholders::error, _disconnect)));
 }
 

@@ -68,11 +68,11 @@ jobs:
           cuda: "12.8.0"
           method: network
           sub-packages: '["nvcc", "cudart", "nvrtc", "nvrtc_dev", "visual_studio_integration"]'
-      - name: vcpkg at the pinned baseline (Boost 1.86, see vcpkg.json)
+      - name: vcpkg at the pinned baseline (see vcpkg.json)
         shell: pwsh
         run: |
           git clone --quiet https://github.com/microsoft/vcpkg.git $env:RUNNER_TEMP/vcpkg
-          git -C $env:RUNNER_TEMP/vcpkg checkout --quiet b2cb0da531c2f1f740045bfe7c4dac59f0b2b69c
+          git -C $env:RUNNER_TEMP/vcpkg checkout --quiet 10541e317a660f4165ba4ac2851ab54a8d4577b1
           & "$env:RUNNER_TEMP/vcpkg/bootstrap-vcpkg.bat" -disableMetrics
           "VCPKG_ROOT=$env:RUNNER_TEMP/vcpkg" | Out-File -FilePath $env:GITHUB_ENV -Append
       - name: configure (vcpkg manifest mode installs the dependencies)

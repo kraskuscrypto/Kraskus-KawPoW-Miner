@@ -15,6 +15,9 @@
     along with kawpowminer.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <boost/asio/bind_executor.hpp>
+#include <boost/asio/post.hpp>
+#include <boost/asio/strand.hpp>
 #include <cstdint>  // Kraskus fork: CLI11 1.8.0 uses uint64_t without including it
 #include <CLI/CLI.hpp>
 
@@ -58,7 +61,7 @@ bool g_running = false;
 bool g_exitOnError = false;  // Whether or not kawpowminer should exit on mining threads errors
 
 condition_variable g_shouldstop;
-boost::asio::io_service g_io_service;  // The IO service itself
+boost::asio::io_context g_io_service;  // The IO service itself
 
 struct MiningChannel : public LogChannel
 {
@@ -82,15 +85,15 @@ public:
         Mining
     };
 
-    MinerCLI() : m_cliDisplayTimer(g_io_service), m_io_strand(g_io_service)
+    MinerCLI() : m_cliDisplayTimer(g_io_service), m_io_strand(g_io_service.get_executor())
     {
         // Initialize display timer as sleeper
         m_cliDisplayTimer.expires_from_now(boost::posix_time::pos_infin);
-        m_cliDisplayTimer.async_wait(m_io_strand.wrap(boost::bind(
+        m_cliDisplayTimer.async_wait(boost::asio::bind_executor(m_io_strand, boost::bind(
             &MinerCLI::cliDisplayInterval_elapsed, this, boost::asio::placeholders::error)));
 
         // Start io_service in it's own thread
-        m_io_thread = std::thread{boost::bind(&boost::asio::io_service::run, &g_io_service)};
+        m_io_thread = std::thread{[] { g_io_service.run(); }};
 
         // Io service is now live and running
         // All components using io_service should post to reference of g_io_service
@@ -117,7 +120,7 @@ public:
 #endif
             // Resubmit timer
             m_cliDisplayTimer.expires_from_now(boost::posix_time::seconds(m_cliDisplayInterval));
-            m_cliDisplayTimer.async_wait(m_io_strand.wrap(boost::bind(
+            m_cliDisplayTimer.async_wait(boost::asio::bind_executor(m_io_strand, boost::bind(
                 &MinerCLI::cliDisplayInterval_elapsed, this, boost::asio::placeholders::error)));
         }
     }
@@ -1214,7 +1217,7 @@ private:
 
         // Initialize display timer as sleeper with proper interval
         m_cliDisplayTimer.expires_from_now(boost::posix_time::seconds(m_cliDisplayInterval));
-        m_cliDisplayTimer.async_wait(m_io_strand.wrap(boost::bind(
+        m_cliDisplayTimer.async_wait(boost::asio::bind_executor(m_io_strand, boost::bind(
             &MinerCLI::cliDisplayInterval_elapsed, this, boost::asio::placeholders::error)));
 
         // Stay in non-busy wait till signals arrive
@@ -1239,7 +1242,7 @@ private:
     // Global boost's io_service
     std::thread m_io_thread;                        // The IO service thread
     boost::asio::deadline_timer m_cliDisplayTimer;  // The timer which ticks display lines
-    boost::asio::io_service::strand m_io_strand;    // A strand to serialize posts in
+    boost::asio::strand<boost::asio::io_context::executor_type> m_io_strand;    // A strand to serialize posts in
                                                     // multithreaded environment
 
     // Physical Mining Devices descriptor

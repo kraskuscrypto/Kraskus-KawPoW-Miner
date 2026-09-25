@@ -1,3 +1,6 @@
+#include <boost/asio/bind_executor.hpp>
+#include <boost/asio/post.hpp>
+#include <boost/asio/strand.hpp>
 #include <kawpowminer/buildinfo.h>
 #include <libdevcore/Log.h>
 #include <ethash/ethash.hpp>
@@ -20,7 +23,7 @@ EthStratumClient::EthStratumClient(int worktimeout, int responsetimeout)
     m_worktimeout(worktimeout),
     m_responsetimeout(responsetimeout),
     m_io_service(g_io_service),
-    m_io_strand(g_io_service),
+    m_io_strand(g_io_service.get_executor()),
     m_socket(nullptr),
     m_workloop_timer(g_io_service),
     m_response_plea_times(64),
@@ -32,7 +35,7 @@ EthStratumClient::EthStratumClient(int worktimeout, int responsetimeout)
 
     // Initialize workloop_timer to infinite wait
     m_workloop_timer.expires_at(boost::posix_time::pos_infin);
-    m_workloop_timer.async_wait(m_io_strand.wrap(boost::bind(
+    m_workloop_timer.async_wait(boost::asio::bind_executor(m_io_strand, boost::bind(
         &EthStratumClient::workloop_timer_elapsed, this, boost::asio::placeholders::error)));
     clear_response_pleas();
 }
@@ -133,7 +136,7 @@ void EthStratumClient::connect()
 
     // Start timing operations
     m_workloop_timer.expires_from_now(boost::posix_time::milliseconds(m_workloop_interval));
-    m_workloop_timer.async_wait(m_io_strand.wrap(boost::bind(
+    m_workloop_timer.async_wait(boost::asio::bind_executor(m_io_strand, boost::bind(
         &EthStratumClient::workloop_timer_elapsed, this, boost::asio::placeholders::error)));
 
     // Reset status flags
@@ -154,19 +157,18 @@ void EthStratumClient::connect()
         // calling the resolver each time is useful as most
         // load balancer will give Ips in different order
         m_resolver = tcp::resolver(m_io_service);
-        tcp::resolver::query q(m_conn->Host(), toString(m_conn->Port()));
 
-        // Start resolving async
-        m_resolver.async_resolve(
-            q, m_io_strand.wrap(boost::bind(&EthStratumClient::resolve_handler, this,
-                   boost::asio::placeholders::error, boost::asio::placeholders::iterator)));
+        // Start resolving async (Kraskus fork: results_type API, Boost >= 1.66 / required by 1.87)
+        m_resolver.async_resolve(m_conn->Host(), toString(m_conn->Port()),
+            boost::asio::bind_executor(m_io_strand, boost::bind(&EthStratumClient::resolve_handler, this,
+                   boost::asio::placeholders::error, boost::asio::placeholders::results)));
     }
     else
     {
         // No need to use the resolver if host is already an IP address
         m_endpoints.push(boost::asio::ip::tcp::endpoint(
             boost::asio::ip::address::from_string(m_conn->Host()), m_conn->Port()));
-        m_io_service.post(m_io_strand.wrap(boost::bind(&EthStratumClient::start_connect, this)));
+        boost::asio::post(m_io_service, boost::asio::bind_executor(m_io_strand, boost::bind(&EthStratumClient::start_connect, this)));
     }
 }
 
@@ -195,7 +197,7 @@ void EthStratumClient::disconnect()
                 // If both client and server are connected then we expect the handler with success
                 // As there may be a connection issue we also endorse a timeout
                 m_securesocket->async_shutdown(
-                    m_io_strand.wrap(boost::bind(&EthStratumClient::onSSLShutdownCompleted, this,
+                    boost::asio::bind_executor(m_io_strand, boost::bind(&EthStratumClient::onSSLShutdownCompleted, this,
                         boost::asio::placeholders::error)));
                 enqueue_response_plea();
 
@@ -257,8 +259,8 @@ void EthStratumClient::disconnect_finalize()
             if (m_conn->StratumMode() > 0)
             {
                 m_conn->SetStratumMode(m_conn->StratumMode() - 1);
-                m_io_service.post(
-                    m_io_strand.wrap(boost::bind(&EthStratumClient::start_connect, this)));
+                boost::asio::post(m_io_service, 
+                    boost::asio::bind_executor(m_io_strand, boost::bind(&EthStratumClient::start_connect, this)));
                 return;
             }
             else
@@ -276,7 +278,7 @@ void EthStratumClient::disconnect_finalize()
 
     // Put the actor back to sleep
     m_workloop_timer.expires_at(boost::posix_time::pos_infin);
-    m_workloop_timer.async_wait(m_io_strand.wrap(boost::bind(
+    m_workloop_timer.async_wait(boost::asio::bind_executor(m_io_strand, boost::bind(
         &EthStratumClient::workloop_timer_elapsed, this, boost::asio::placeholders::error)));
 
     // Trigger handlers
@@ -285,19 +287,16 @@ void EthStratumClient::disconnect_finalize()
 }
 
 void EthStratumClient::resolve_handler(
-    const boost::system::error_code& ec, tcp::resolver::iterator i)
+    const boost::system::error_code& ec, tcp::resolver::results_type results)
 {
     if (!ec)
     {
-        while (i != tcp::resolver::iterator())
-        {
-            m_endpoints.push(i->endpoint());
-            i++;
-        }
+        for (auto const& entry : results)
+            m_endpoints.push(entry.endpoint());
         m_resolver.cancel();
 
         // Resolver has finished so invoke connection asynchronously
-        m_io_service.post(m_io_strand.wrap(boost::bind(&EthStratumClient::start_connect, this)));
+        boost::asio::post(m_io_service, boost::asio::bind_executor(m_io_strand, boost::bind(&EthStratumClient::start_connect, this)));
     }
     else
     {
@@ -341,12 +340,12 @@ void EthStratumClient::start_connect()
         if (m_conn->SecLevel() != SecureLevel::NONE)
         {
             m_securesocket->lowest_layer().async_connect(m_endpoint,
-                m_io_strand.wrap(boost::bind(&EthStratumClient::connect_handler, this, _1)));
+                boost::asio::bind_executor(m_io_strand, boost::bind(&EthStratumClient::connect_handler, this, _1)));
         }
         else
         {
             m_socket->async_connect(m_endpoint,
-                m_io_strand.wrap(boost::bind(&EthStratumClient::connect_handler, this, _1)));
+                boost::asio::bind_executor(m_io_strand, boost::bind(&EthStratumClient::connect_handler, this, _1)));
         }
     }
     else
@@ -437,7 +436,7 @@ void EthStratumClient::workloop_timer_elapsed(const boost::system::error_code& e
                     jRes["result"] = Json::nullValue;
                     jRes["error"] = true;
                     clear_response_pleas();
-                    m_io_service.post(m_io_strand.wrap(
+                    boost::asio::post(m_io_service, boost::asio::bind_executor(m_io_strand, 
                         boost::bind(&EthStratumClient::processResponse, this, jRes)));
                 }
                 else
@@ -446,8 +445,8 @@ void EthStratumClient::workloop_timer_elapsed(const boost::system::error_code& e
                     cwarn << "No response received in " << m_responsetimeout << " seconds.";
                     m_endpoints.pop();
                     clear_response_pleas();
-                    m_io_service.post(
-                        m_io_strand.wrap(boost::bind(&EthStratumClient::disconnect, this)));
+                    boost::asio::post(m_io_service, 
+                        boost::asio::bind_executor(m_io_strand, boost::bind(&EthStratumClient::disconnect, this)));
                 }
             }
             // No work timeout
@@ -458,15 +457,15 @@ void EthStratumClient::workloop_timer_elapsed(const boost::system::error_code& e
                 cwarn << "No new work received in " << m_worktimeout << " seconds.";
                 m_endpoints.pop();
                 clear_response_pleas();
-                m_io_service.post(
-                    m_io_strand.wrap(boost::bind(&EthStratumClient::disconnect, this)));
+                boost::asio::post(m_io_service, 
+                    boost::asio::bind_executor(m_io_strand, boost::bind(&EthStratumClient::disconnect, this)));
             }
         }
     }
 
     // Resubmit timing operations
     m_workloop_timer.expires_from_now(boost::posix_time::milliseconds(m_workloop_interval));
-    m_workloop_timer.async_wait(m_io_strand.wrap(boost::bind(
+    m_workloop_timer.async_wait(boost::asio::bind_executor(m_io_strand, boost::bind(
         &EthStratumClient::workloop_timer_elapsed, this, boost::asio::placeholders::error)));
 }
 
@@ -493,7 +492,7 @@ void EthStratumClient::connect_handler(const boost::system::error_code& ec)
         // Eventually is start_connect which will check for an
         // empty list.
         m_endpoints.pop();
-        m_io_service.post(m_io_strand.wrap(boost::bind(&EthStratumClient::start_connect, this)));
+        boost::asio::post(m_io_service, boost::asio::bind_executor(m_io_strand, boost::bind(&EthStratumClient::start_connect, this)));
 
         return;
     }
@@ -552,7 +551,7 @@ void EthStratumClient::connect_handler(const boost::system::error_code& ec)
             // No need to try other IPs as the certificate is based on host-name
             // not ip address. Trying other IPs would end up with the very same error.
             m_conn->MarkUnrecoverable();
-            m_io_service.post(m_io_strand.wrap(boost::bind(&EthStratumClient::disconnect, this)));
+            boost::asio::post(m_io_service, boost::asio::bind_executor(m_io_strand, boost::bind(&EthStratumClient::disconnect, this)));
             return;
         }
     }
@@ -801,7 +800,7 @@ void EthStratumClient::processResponse(Json::Value& responseObject)
         cwarn << "Do not blame kawpowminer for this. Ask pool devs to honor http://www.jsonrpc.org/ "
                  "specifications ";
         cwarn << "Disconnecting...";
-        m_io_service.post(m_io_strand.wrap(boost::bind(&EthStratumClient::disconnect, this)));
+        boost::asio::post(m_io_service, boost::asio::bind_executor(m_io_strand, boost::bind(&EthStratumClient::disconnect, this)));
         return;
     }
 
@@ -852,8 +851,8 @@ void EthStratumClient::processResponse(Json::Value& responseObject)
                     break;
                 }
 
-                m_io_service.post(
-                    m_io_strand.wrap(boost::bind(&EthStratumClient::disconnect, this)));
+                boost::asio::post(m_io_service, 
+                    boost::asio::bind_executor(m_io_strand, boost::bind(&EthStratumClient::disconnect, this)));
                 return;
             }
 
@@ -903,8 +902,8 @@ void EthStratumClient::processResponse(Json::Value& responseObject)
                         cnote << "Negotiation of EthereumStratum/2.0.0 failed. Trying another ...";
                     }
                     // Disconnect
-                    m_io_service.post(
-                        m_io_strand.wrap(boost::bind(&EthStratumClient::disconnect, this)));
+                    boost::asio::post(m_io_service, 
+                        boost::asio::bind_executor(m_io_strand, boost::bind(&EthStratumClient::disconnect, this)));
                     return;
                 }
 
@@ -955,8 +954,8 @@ void EthStratumClient::processResponse(Json::Value& responseObject)
                                  "another ...";
                     }
                     // Disconnect
-                    m_io_service.post(
-                        m_io_strand.wrap(boost::bind(&EthStratumClient::disconnect, this)));
+                    boost::asio::post(m_io_service, 
+                        boost::asio::bind_executor(m_io_strand, boost::bind(&EthStratumClient::disconnect, this)));
                     return;
                 }
 
@@ -995,8 +994,8 @@ void EthStratumClient::processResponse(Json::Value& responseObject)
                                  "another ...";
                     }
                     // Disconnect
-                    m_io_service.post(
-                        m_io_strand.wrap(boost::bind(&EthStratumClient::disconnect, this)));
+                    boost::asio::post(m_io_service, 
+                        boost::asio::bind_executor(m_io_strand, boost::bind(&EthStratumClient::disconnect, this)));
                     return;
                 }
 
@@ -1033,7 +1032,7 @@ void EthStratumClient::processResponse(Json::Value& responseObject)
                         {
                             cwarn << "Disconnecting from stratum because of invalid extranonce";
                             // Disconnect from stratum if it fails to set the extra nonce
-                            m_io_service.post(m_io_strand.wrap(boost::bind(&EthStratumClient::disconnect, this)));
+                            boost::asio::post(m_io_service, boost::asio::bind_executor(m_io_strand, boost::bind(&EthStratumClient::disconnect, this)));
                             return;
                         }
                     }
@@ -1054,8 +1053,8 @@ void EthStratumClient::processResponse(Json::Value& responseObject)
                                  "another ...";
                     }
                     // Disconnect
-                    m_io_service.post(
-                        m_io_strand.wrap(boost::bind(&EthStratumClient::disconnect, this)));
+                    boost::asio::post(m_io_service, 
+                        boost::asio::bind_executor(m_io_strand, boost::bind(&EthStratumClient::disconnect, this)));
                     return;
                 }
 
@@ -1094,8 +1093,8 @@ void EthStratumClient::processResponse(Json::Value& responseObject)
                     // Got invalid session id which is mandatory
                     cwarn << "Got invalid or missing session id. Disconnecting ... ";
                     m_conn->MarkUnrecoverable();
-                    m_io_service.post(
-                        m_io_strand.wrap(boost::bind(&EthStratumClient::disconnect, this)));
+                    boost::asio::post(m_io_service, 
+                        boost::asio::bind_executor(m_io_strand, boost::bind(&EthStratumClient::disconnect, this)));
                     return;
                 }
 
@@ -1134,8 +1133,8 @@ void EthStratumClient::processResponse(Json::Value& responseObject)
                 cnote << "Worker " << EthWhite << m_conn->UserDotWorker() << EthReset
                       << " not authorized : " << _errReason;
                 m_conn->MarkUnrecoverable();
-                m_io_service.post(
-                    m_io_strand.wrap(boost::bind(&EthStratumClient::disconnect, this)));
+                boost::asio::post(m_io_service, 
+                    boost::asio::bind_executor(m_io_strand, boost::bind(&EthStratumClient::disconnect, this)));
                 return;
             }
             else
@@ -1154,8 +1153,8 @@ void EthStratumClient::processResponse(Json::Value& responseObject)
                 cnote << "Worker " << EthWhite << m_conn->UserDotWorker() << EthReset
                       << " not authorized : " << _errReason;
                 m_conn->MarkUnrecoverable();
-                m_io_service.post(
-                    m_io_strand.wrap(boost::bind(&EthStratumClient::disconnect, this)));
+                boost::asio::post(m_io_service, 
+                    boost::asio::bind_executor(m_io_strand, boost::bind(&EthStratumClient::disconnect, this)));
                 return;
             }
             m_authpending.store(false, memory_order_relaxed);
@@ -1285,8 +1284,8 @@ void EthStratumClient::processResponse(Json::Value& responseObject)
                     break;
                 }
 
-                m_io_service.post(
-                    m_io_strand.wrap(boost::bind(&EthStratumClient::disconnect, this)));
+                boost::asio::post(m_io_service, 
+                    boost::asio::bind_executor(m_io_strand, boost::bind(&EthStratumClient::disconnect, this)));
                 return;
             }
 
@@ -1297,8 +1296,8 @@ void EthStratumClient::processResponse(Json::Value& responseObject)
                     // Subscription pending
                     cnote << "Subscription failed : "
                           << (_errReason.empty() ? "Unspecified error" : _errReason);
-                    m_io_service.post(
-                        m_io_strand.wrap(boost::bind(&EthStratumClient::disconnect, this)));
+                    boost::asio::post(m_io_service, 
+                        boost::asio::bind_executor(m_io_strand, boost::bind(&EthStratumClient::disconnect, this)));
                     return;
                 }
                 else if (isSubscribed() && !isAuthorized())
@@ -1306,8 +1305,8 @@ void EthStratumClient::processResponse(Json::Value& responseObject)
                     // Authorization pending
                     cnote << "Worker not authorized : "
                           << (_errReason.empty() ? "Unspecified error" : _errReason);
-                    m_io_service.post(
-                        m_io_strand.wrap(boost::bind(&EthStratumClient::disconnect, this)));
+                    boost::asio::post(m_io_service, 
+                        boost::asio::bind_executor(m_io_strand, boost::bind(&EthStratumClient::disconnect, this)));
                     return;
                 }
             };
@@ -1505,8 +1504,8 @@ void EthStratumClient::processResponse(Json::Value& responseObject)
                 {
                     m_conn->MarkUnrecoverable();
                 }
-                m_io_service.post(
-                    m_io_strand.wrap(boost::bind(&EthStratumClient::disconnect, this)));
+                boost::asio::post(m_io_service, 
+                    boost::asio::bind_executor(m_io_strand, boost::bind(&EthStratumClient::disconnect, this)));
             }
         }
         else if (_method == "mining.set_extranonce" && m_conn->StratumMode() == ETHEREUMSTRATUM)
@@ -1518,8 +1517,8 @@ void EthStratumClient::processResponse(Json::Value& responseObject)
                 if (!processExtranonce(enonce))
                 {
                     cwarn << "Disconnecting ...";
-                    m_io_service.post(
-                        m_io_strand.wrap(boost::bind(&EthStratumClient::disconnect, this)));
+                    boost::asio::post(m_io_service, 
+                        boost::asio::bind_executor(m_io_strand, boost::bind(&EthStratumClient::disconnect, this)));
                 }
             }
         }
@@ -1565,8 +1564,8 @@ void EthStratumClient::processResponse(Json::Value& responseObject)
             if (!processExtranonce(enonce))
             {
                 cwarn << "Disconnecting ...";
-                m_io_service.post(
-                    m_io_strand.wrap(boost::bind(&EthStratumClient::disconnect, this)));
+                boost::asio::post(m_io_service, 
+                    boost::asio::bind_executor(m_io_strand, boost::bind(&EthStratumClient::disconnect, this)));
             }
         }
         else if (_method == "mining.set_target") {
@@ -1580,7 +1579,7 @@ void EthStratumClient::processResponse(Json::Value& responseObject)
         else if (_method == "mining.bye" && m_conn->StratumMode() == ETHEREUMSTRATUM2)
         {
             cnote << m_conn->Host() << " requested connection close. Disconnecting ...";
-            m_io_service.post(m_io_strand.wrap(boost::bind(&EthStratumClient::disconnect, this)));
+            boost::asio::post(m_io_service, boost::asio::bind_executor(m_io_strand, boost::bind(&EthStratumClient::disconnect, this)));
         }
         else if (_method == "client.get_version")
         {
@@ -1725,13 +1724,13 @@ void EthStratumClient::recvSocketData()
     if (m_conn->SecLevel() != SecureLevel::NONE)
     {
         async_read(*m_securesocket, m_recvBuffer, boost::asio::transfer_at_least(1),
-            m_io_strand.wrap(boost::bind(&EthStratumClient::onRecvSocketDataCompleted, this,
+            boost::asio::bind_executor(m_io_strand, boost::bind(&EthStratumClient::onRecvSocketDataCompleted, this,
                 boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred)));
     }
     else
     {
         async_read(*m_nonsecuresocket, m_recvBuffer, boost::asio::transfer_at_least(1),
-            m_io_strand.wrap(boost::bind(&EthStratumClient::onRecvSocketDataCompleted, this,
+            boost::asio::bind_executor(m_io_strand, boost::bind(&EthStratumClient::onRecvSocketDataCompleted, this,
                 boost::asio::placeholders::error, boost::asio::placeholders::bytes_transferred)));
     }
 }
@@ -1850,7 +1849,7 @@ void EthStratumClient::onRecvSocketDataCompleted(
             {
                 cwarn << "Socket read failed: " << ec.message();
             }
-            m_io_service.post(m_io_strand.wrap(boost::bind(&EthStratumClient::disconnect, this)));
+            boost::asio::post(m_io_service, boost::asio::bind_executor(m_io_strand, boost::bind(&EthStratumClient::disconnect, this)));
         }
     }
 }
@@ -1890,13 +1889,13 @@ void EthStratumClient::sendSocketData()
     if (m_conn->SecLevel() != SecureLevel::NONE)
     {
         async_write(*m_securesocket, m_sendBuffer,
-            m_io_strand.wrap(boost::bind(&EthStratumClient::onSendSocketDataCompleted, this,
+            boost::asio::bind_executor(m_io_strand, boost::bind(&EthStratumClient::onSendSocketDataCompleted, this,
                 boost::asio::placeholders::error)));
     }
     else
     {
         async_write(*m_nonsecuresocket, m_sendBuffer,
-            m_io_strand.wrap(boost::bind(&EthStratumClient::onSendSocketDataCompleted, this,
+            boost::asio::bind_executor(m_io_strand, boost::bind(&EthStratumClient::onSendSocketDataCompleted, this,
                 boost::asio::placeholders::error)));
     }
 }
@@ -1913,13 +1912,13 @@ void EthStratumClient::onSendSocketDataCompleted(const boost::system::error_code
             (SSL_R_PROTOCOL_IS_SHUTDOWN == ERR_GET_REASON(ec.value())))
         {
             cnote << "SSL Stream error : " << ec.message();
-            m_io_service.post(m_io_strand.wrap(boost::bind(&EthStratumClient::disconnect, this)));
+            boost::asio::post(m_io_service, boost::asio::bind_executor(m_io_strand, boost::bind(&EthStratumClient::disconnect, this)));
         }
 
         if (isConnected())
         {
             cwarn << "Socket write failed : " << ec.message();
-            m_io_service.post(m_io_strand.wrap(boost::bind(&EthStratumClient::disconnect, this)));
+            boost::asio::post(m_io_service, boost::asio::bind_executor(m_io_strand, boost::bind(&EthStratumClient::disconnect, this)));
         }
     }
     else
@@ -1940,7 +1939,7 @@ void EthStratumClient::onSSLShutdownCompleted(const boost::system::error_code& e
 {
     (void)ec;
     clear_response_pleas();
-    m_io_service.post(m_io_strand.wrap(boost::bind(&EthStratumClient::disconnect_finalize, this)));
+    boost::asio::post(m_io_service, boost::asio::bind_executor(m_io_strand, boost::bind(&EthStratumClient::disconnect_finalize, this)));
 }
 
 void EthStratumClient::enqueue_response_plea()
