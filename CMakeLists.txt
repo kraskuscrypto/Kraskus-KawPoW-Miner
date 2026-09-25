@@ -20,7 +20,7 @@ set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 
 project(kawpowminer LANGUAGES C CXX)
 # Kraskus fork version (numeric MAJOR.MINOR.PATCH; MAJOR follows docs/ENGINE-CONTRACT.md).
-set(PROJECT_VERSION 1.3.0)
+set(PROJECT_VERSION 1.3.1)
 set(KRASKUS_ENGINE_CONTRACT_VERSION 1)
 
 # Current Boost and compilers: C++17 (cable's toolchain only knows cxx11; override after project()).
@@ -94,6 +94,8 @@ if(UNIX AND NOT APPLE)
 endif()
 
 
+# Kraskus fork: build-info templates that always embed the commit (cmake/kraskus-buildinfo/README.md).
+set(cable_buildinfo_template_dir ${CMAKE_CURRENT_SOURCE_DIR}/cmake/kraskus-buildinfo)
 cable_add_buildinfo_library(PROJECT_NAME ${PROJECT_NAME})
 
 add_subdirectory(libprogpow)

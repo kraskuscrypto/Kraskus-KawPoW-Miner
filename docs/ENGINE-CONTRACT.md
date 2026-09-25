@@ -46,5 +46,5 @@ is out of scope for contract v1.)
 ## Versioning
 
 `MAJOR.MINOR.PATCH` numeric only (Kraskus workspace rule). `MAJOR` changes only with this
-contract. The version string appears in `--version`, in the API `miner_getstatdetail`
+contract. The version string is always `<MAJOR.MINOR.PATCH>+commit.<sha8>` (`.dirty` appended for a modified tree), including release builds made on the tag (since 1.3.1; the 1.3.0 release printed the bare version and is superseded). It appears in `--version`, in the API `miner_getstatdetail`
 (`software`), and in the release artefact names `kraskus-kawpowminer-<version>-<platform>.<ext>`.

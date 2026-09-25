@@ -9,7 +9,7 @@ Kraskus-maintained fork of [kawpowminer](https://github.com/RavenCommunity/kawpo
 - Building it yourself, reproducibly: [docs/KRASKUS-BUILD.md](docs/KRASKUS-BUILD.md).
 - Releases, hashes and signatures: [docs/RELEASE.md](docs/RELEASE.md).
 - Targets: Pascal (GTX 1070), Ampere (RTX 3070 Ti, first qualification rig), Blackwell (RTX 5070); Windows x64 and Linux x64.
-- Status: **build modernization in progress (1.3.0)**; see CHANGELOG.md and `docs/qualification/`.
+- Status: **1.3.1 released (Linux x64 + Windows x64 CI builds, SHA-256 in the release)**; simulation-mode qualification on the RTX 3070 Ti, real-pool qualification pending; see CHANGELOG.md and `docs/qualification/`.
 
 The original upstream README follows.
 

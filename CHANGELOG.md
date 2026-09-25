@@ -1,3 +1,7 @@
+## 1.3.1 (Kraskus fork, 2026-09-25)
+
+- Version string always carries the commit (`kawpowminer 1.3.1+commit.<sha8>[.dirty]`), also for a build made exactly on the release tag; 1.3.0's release binaries printed the bare `kawpowminer 1.3.0` (cable's default on a tag) and therefore failed the engine contract's version-line check. Build-info templates now live in `cmake/kraskus-buildinfo/` (copy of cable's, Apache-2.0). No other change; 1.3.0 is superseded.
+
 ## 1.3.0 (Kraskus fork, 2026-09-25)
 
 - Forked from RavenCommunity/kawpowminer 1.2.4 (`632f6ea`, 2021-06-15). GPL-3.0 unchanged. No fee.
