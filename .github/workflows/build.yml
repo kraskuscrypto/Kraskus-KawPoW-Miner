@@ -85,8 +85,7 @@ jobs:
           $exe = "build/kawpowminer/Release/kawpowminer.exe"
           if (-not (Test-Path $exe)) { throw "binary missing" }
           "size: $((Get-Item $exe).Length) bytes"
-          if (Test-Path "$env:SystemRoot\System32
-vcuda.dll") { & $exe --version } else { "no NVIDIA driver on this runner; --version skipped" }
+          if (Test-Path (Join-Path $env:SystemRoot "System32/nvcuda.dll")) { & $exe --version } else { "no NVIDIA driver on this runner; --version skipped" }
       - name: package
         shell: pwsh
         run: |
