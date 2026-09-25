@@ -30,7 +30,9 @@
 #include <boost/bind.hpp>
 #include <boost/dll.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/process.hpp>
+// Kraskus fork: Boost.Process v1 explicitly (Boost >= 1.88 makes <boost/process.hpp> v2,
+// which has no spawn()); only used by the reboot.sh/reboot.bat hook below.
+#include <boost/process/v1.hpp>
 
 #include <json/json.h>
 

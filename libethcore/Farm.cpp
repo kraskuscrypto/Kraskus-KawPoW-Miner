@@ -675,7 +675,7 @@ bool Farm::spawn_file_in_bin_dir(const char* filename, const std::vector<std::st
             return false;
 #endif
         /* spawn it (no wait,...) - fire and forget! */
-        boost::process::spawn(fn, args);
+        boost::process::v1::spawn(fn, args);
         return true;
     }
     catch (...)
