@@ -1,25 +1,18 @@
 cmake_minimum_required(VERSION 3.24)
-# Kraskus fork: CMake 4.x removed <3.5 compatibility; the vendored cable/Hunter modules still
-# declare old minimums, so builds pass -DCMAKE_POLICY_VERSION_MINIMUM=3.5 (docs/KRASKUS-BUILD.md).
+# Kraskus fork: CMake 4.x removed <3.5 compatibility; the vendored cable modules and the fetched
+# dependencies still declare old minimums, so builds export CMAKE_POLICY_VERSION_MINIMUM=3.5
+# (docs/KRASKUS-BUILD.md).
 
 include(cmake/cable/bootstrap.cmake)
 
 include(CableBuildInfo)
 include(CableBuildType)
 include(CableToolchains)
-include(HunterGate)
 
-include(defaults/HunterCacheServers)
-
-cable_configure_toolchain(DEFAULT cxx11)
-
-set(HUNTER_CONFIGURATION_TYPES Release CACHE STRING "Build type of Hunter packages")
-set(HUNTER_JOBS_NUMBER 6 CACHE STRING "Number of parallel builds used by Hunter")
-HunterGate(
-    URL "https://github.com/ruslo/hunter/archive/v0.23.214.tar.gz"
-    SHA1 "e14bc153a7f16d6a5eeec845fb0283c8fad8c358"
-	LOCAL
-)
+# Kraskus fork: Hunter (the upstream package manager, pinned to Boost 1.70) cannot build with
+# current compilers; dependencies now come from cmake/KraskusDependencies.cmake (Boost from a
+# prefix or the system, ethash/jsoncpp/CLI11 fetched at their upstream-pinned versions).
+cable_configure_toolchain(DEFAULT cxx17)
 
 project(kawpowminer LANGUAGES C CXX)
 # Kraskus fork version (numeric MAJOR.MINOR.PATCH; MAJOR follows docs/ENGINE-CONTRACT.md).
@@ -64,14 +57,7 @@ function(configureProject)
 	endif()
 endfunction()
 
-hunter_add_package(Boost COMPONENTS system filesystem thread)
-find_package(Boost CONFIG REQUIRED COMPONENTS system filesystem thread)
-
-hunter_add_package(jsoncpp)
-find_package(jsoncpp CONFIG REQUIRED)
-
-hunter_add_package(ethash)
-find_package(ethash CONFIG REQUIRED)
+include(cmake/KraskusDependencies.cmake)
 
 configureProject()
 

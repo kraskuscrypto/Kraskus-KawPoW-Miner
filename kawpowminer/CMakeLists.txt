@@ -13,9 +13,6 @@ if(MSVC)
 	target_sources(${EXECUTABLE} PRIVATE kawpowminer.rc)
 endif()
 
-hunter_add_package(CLI11)
-find_package(CLI11 CONFIG REQUIRED)
-
 target_link_libraries(kawpowminer PRIVATE ethcore poolprotocols devcore kawpowminer-buildinfo CLI11::CLI11 Boost::filesystem Boost::system)
 
 if(ETHDBUS)
