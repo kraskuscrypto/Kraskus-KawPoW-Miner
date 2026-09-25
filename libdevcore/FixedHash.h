@@ -25,6 +25,7 @@
 
 #include <algorithm>
 #include <array>
+#include <boost/container_hash/hash.hpp>  // Kraskus fork: boost::hash_range (Boost >= 1.67 layout)
 #include <cstdint>
 #include <random>
 
