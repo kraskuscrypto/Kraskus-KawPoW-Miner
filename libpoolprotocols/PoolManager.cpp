@@ -83,8 +83,8 @@ void PoolManager::setClientHandlers()
             // after specified amount of time
             if (m_activeConnectionIdx != 0 && m_Settings.poolFailoverTimeout)
             {
-                m_failovertimer.expires_from_now(
-                    boost::posix_time::minutes(m_Settings.poolFailoverTimeout));
+                m_failovertimer.expires_after(
+                    std::chrono::minutes(m_Settings.poolFailoverTimeout));
                 m_failovertimer.async_wait(boost::asio::bind_executor(m_io_strand, boost::bind(
                     &PoolManager::failovertimer_elapsed, this, boost::asio::placeholders::error)));
             }
@@ -108,7 +108,7 @@ void PoolManager::setClientHandlers()
         // Activate timing for HR submission
         if (m_Settings.reportHashrate)
         {
-            m_submithrtimer.expires_from_now(boost::posix_time::seconds(m_Settings.hashRateInterval));
+            m_submithrtimer.expires_after(std::chrono::seconds(m_Settings.hashRateInterval));
             m_submithrtimer.async_wait(boost::asio::bind_executor(m_io_strand, boost::bind(
                 &PoolManager::submithrtimer_elapsed, this, boost::asio::placeholders::error)));
         }
@@ -503,7 +503,7 @@ void PoolManager::submithrtimer_elapsed(const boost::system::error_code& ec)
                 p_client->submitHashrate((uint32_t)Farm::f().HashRate(), m_Settings.hashRateId);
 
             // Resubmit actor
-            m_submithrtimer.expires_from_now(boost::posix_time::seconds(m_Settings.hashRateInterval));
+            m_submithrtimer.expires_after(std::chrono::seconds(m_Settings.hashRateInterval));
             m_submithrtimer.async_wait(boost::asio::bind_executor(m_io_strand, boost::bind(
                 &PoolManager::submithrtimer_elapsed, this, boost::asio::placeholders::error)));
         }

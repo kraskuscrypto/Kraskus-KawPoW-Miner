@@ -153,7 +153,7 @@ Farm::Farm(std::map<std::string, DeviceDescriptor>& _DevicesCollection,
     // Start data collector timer
     // It should work for the whole lifetime of Farm
     // regardless it's mining state
-    m_collectTimer.expires_from_now(boost::posix_time::milliseconds(m_collectInterval));
+    m_collectTimer.expires_after(std::chrono::milliseconds(m_collectInterval));
     m_collectTimer.async_wait(
         boost::asio::bind_executor(m_io_strand, boost::bind(&Farm::collectData, this, boost::asio::placeholders::error)));
 }
@@ -645,7 +645,7 @@ void Farm::collectData(const boost::system::error_code& ec)
     }
 
     // Resubmit timer for another loop
-    m_collectTimer.expires_from_now(boost::posix_time::milliseconds(m_collectInterval));
+    m_collectTimer.expires_after(std::chrono::milliseconds(m_collectInterval));
     m_collectTimer.async_wait(
         boost::asio::bind_executor(m_io_strand, boost::bind(&Farm::collectData, this, boost::asio::placeholders::error)));
 }

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <chrono>
+#include <boost/asio/steady_timer.hpp>
 #include <boost/asio/bind_executor.hpp>
 #include <boost/asio/post.hpp>
 #include <boost/asio/strand.hpp>
@@ -87,8 +89,8 @@ private:
     WorkPackage m_currentWp;
 
     boost::asio::strand<boost::asio::io_context::executor_type> m_io_strand;
-    boost::asio::deadline_timer m_failovertimer;
-    boost::asio::deadline_timer m_submithrtimer;
+    boost::asio::steady_timer m_failovertimer;
+    boost::asio::steady_timer m_submithrtimer;
 
     std::unique_ptr<PoolClient> p_client = nullptr;
 

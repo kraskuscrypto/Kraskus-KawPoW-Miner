@@ -24,6 +24,11 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Kraskus fork: the pool/API/farm code uses only the current Boost.Asio API (Boost >= 1.87
+# removed the deprecated one); make older Boost versions reject deprecated calls as well so
+# every build environment agrees (see docs/KRASKUS-BUILD.md).
+add_definitions(-DBOOST_ASIO_NO_DEPRECATED)
+
 # Reproducible binaries: no absolute-path-dependent timestamps in the linked output.
 if (MSVC)
 	add_link_options(/Brepro)

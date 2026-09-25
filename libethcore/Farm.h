@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include <chrono>
+#include <boost/asio/steady_timer.hpp>
 #include <boost/asio/bind_executor.hpp>
 #include <boost/asio/post.hpp>
 #include <boost/asio/strand.hpp>
@@ -283,7 +285,7 @@ private:
     CPSettings m_CPSettings;  // CPU settings passed to CPU Miner instantiator
 
     boost::asio::strand<boost::asio::io_context::executor_type> m_io_strand;
-    boost::asio::deadline_timer m_collectTimer;
+    boost::asio::steady_timer m_collectTimer;
     static const int m_collectInterval = 5000;
 
     string m_pool_addresses;

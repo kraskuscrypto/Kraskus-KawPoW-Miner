@@ -15,6 +15,8 @@
     along with kawpowminer.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <chrono>
+#include <boost/asio/steady_timer.hpp>
 #include <boost/asio/bind_executor.hpp>
 #include <boost/asio/post.hpp>
 #include <boost/asio/strand.hpp>
@@ -88,7 +90,7 @@ public:
     MinerCLI() : m_cliDisplayTimer(g_io_service), m_io_strand(g_io_service.get_executor())
     {
         // Initialize display timer as sleeper
-        m_cliDisplayTimer.expires_from_now(boost::posix_time::pos_infin);
+        m_cliDisplayTimer.expires_at(boost::asio::steady_timer::time_point::max());
         m_cliDisplayTimer.async_wait(boost::asio::bind_executor(m_io_strand, boost::bind(
             &MinerCLI::cliDisplayInterval_elapsed, this, boost::asio::placeholders::error)));
 
@@ -119,7 +121,7 @@ public:
             dbusint.send(Farm::f().Telemetry().str().c_str());
 #endif
             // Resubmit timer
-            m_cliDisplayTimer.expires_from_now(boost::posix_time::seconds(m_cliDisplayInterval));
+            m_cliDisplayTimer.expires_after(std::chrono::seconds(m_cliDisplayInterval));
             m_cliDisplayTimer.async_wait(boost::asio::bind_executor(m_io_strand, boost::bind(
                 &MinerCLI::cliDisplayInterval_elapsed, this, boost::asio::placeholders::error)));
         }
@@ -190,7 +192,7 @@ public:
         {
             // Validate Ip address
             boost::system::error_code ec;
-            outaddr = boost::asio::ip::address::from_string(matches[1], ec).to_string();
+            outaddr = boost::asio::ip::make_address(matches[1], ec).to_string();
             if (ec)
                 throw std::invalid_argument("Invalid Ip Address");
 
@@ -1216,7 +1218,7 @@ private:
         PoolManager::p().start();
 
         // Initialize display timer as sleeper with proper interval
-        m_cliDisplayTimer.expires_from_now(boost::posix_time::seconds(m_cliDisplayInterval));
+        m_cliDisplayTimer.expires_after(std::chrono::seconds(m_cliDisplayInterval));
         m_cliDisplayTimer.async_wait(boost::asio::bind_executor(m_io_strand, boost::bind(
             &MinerCLI::cliDisplayInterval_elapsed, this, boost::asio::placeholders::error)));
 
@@ -1241,7 +1243,7 @@ private:
 
     // Global boost's io_service
     std::thread m_io_thread;                        // The IO service thread
-    boost::asio::deadline_timer m_cliDisplayTimer;  // The timer which ticks display lines
+    boost::asio::steady_timer m_cliDisplayTimer;  // The timer which ticks display lines
     boost::asio::strand<boost::asio::io_context::executor_type> m_io_strand;    // A strand to serialize posts in
                                                     // multithreaded environment
 

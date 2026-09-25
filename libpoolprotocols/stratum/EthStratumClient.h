@@ -1,5 +1,7 @@
 #pragma once
 
+#include <chrono>
+#include <boost/asio/steady_timer.hpp>
 #include <boost/asio/bind_executor.hpp>
 #include <boost/asio/post.hpp>
 #include <boost/asio/strand.hpp>
@@ -142,7 +144,7 @@ private:
     boost::asio::streambuf m_recvBuffer;
     Json::StreamWriterBuilder m_jSwBuilder;
 
-    boost::asio::deadline_timer m_workloop_timer;
+    boost::asio::steady_timer m_workloop_timer;
 
     std::atomic<int> m_response_pleas_count = {0};
     std::atomic<std::chrono::steady_clock::duration> m_response_plea_older;

@@ -1,3 +1,6 @@
+#include <boost/asio/ssl/host_name_verification.hpp>
+#include <chrono>
+#include <boost/asio/steady_timer.hpp>
 #include <boost/asio/bind_executor.hpp>
 #include <boost/asio/post.hpp>
 #include <boost/asio/strand.hpp>
@@ -34,7 +37,7 @@ EthStratumClient::EthStratumClient(int worktimeout, int responsetimeout)
     m_jSwBuilder.settings_["indentation"] = "";
 
     // Initialize workloop_timer to infinite wait
-    m_workloop_timer.expires_at(boost::posix_time::pos_infin);
+    m_workloop_timer.expires_at(boost::asio::steady_timer::time_point::max());
     m_workloop_timer.async_wait(boost::asio::bind_executor(m_io_strand, boost::bind(
         &EthStratumClient::workloop_timer_elapsed, this, boost::asio::placeholders::error)));
     clear_response_pleas();
@@ -63,7 +66,7 @@ void EthStratumClient::init_socket()
         {
             m_securesocket->set_verify_mode(boost::asio::ssl::verify_peer);
             m_securesocket->set_verify_callback(
-                make_verbose_verification(boost::asio::ssl::rfc2818_verification(m_conn->Host())));
+                make_verbose_verification(boost::asio::ssl::host_name_verification(m_conn->Host())));
         }
 #ifdef _WIN32
         HCERTSTORE hStore = CertOpenSystemStore(0, "ROOT");
@@ -135,7 +138,7 @@ void EthStratumClient::connect()
         return;
 
     // Start timing operations
-    m_workloop_timer.expires_from_now(boost::posix_time::milliseconds(m_workloop_interval));
+    m_workloop_timer.expires_after(std::chrono::milliseconds(m_workloop_interval));
     m_workloop_timer.async_wait(boost::asio::bind_executor(m_io_strand, boost::bind(
         &EthStratumClient::workloop_timer_elapsed, this, boost::asio::placeholders::error)));
 
@@ -167,7 +170,7 @@ void EthStratumClient::connect()
     {
         // No need to use the resolver if host is already an IP address
         m_endpoints.push(boost::asio::ip::tcp::endpoint(
-            boost::asio::ip::address::from_string(m_conn->Host()), m_conn->Port()));
+            boost::asio::ip::make_address(m_conn->Host()), m_conn->Port()));
         boost::asio::post(m_io_service, boost::asio::bind_executor(m_io_strand, boost::bind(&EthStratumClient::start_connect, this)));
     }
 }
@@ -277,7 +280,7 @@ void EthStratumClient::disconnect_finalize()
     m_solution_submitted_max_id = 0;
 
     // Put the actor back to sleep
-    m_workloop_timer.expires_at(boost::posix_time::pos_infin);
+    m_workloop_timer.expires_at(boost::asio::steady_timer::time_point::max());
     m_workloop_timer.async_wait(boost::asio::bind_executor(m_io_strand, boost::bind(
         &EthStratumClient::workloop_timer_elapsed, this, boost::asio::placeholders::error)));
 
@@ -464,7 +467,7 @@ void EthStratumClient::workloop_timer_elapsed(const boost::system::error_code& e
     }
 
     // Resubmit timing operations
-    m_workloop_timer.expires_from_now(boost::posix_time::milliseconds(m_workloop_interval));
+    m_workloop_timer.expires_after(std::chrono::milliseconds(m_workloop_interval));
     m_workloop_timer.async_wait(boost::asio::bind_executor(m_io_strand, boost::bind(
         &EthStratumClient::workloop_timer_elapsed, this, boost::asio::placeholders::error)));
 }
@@ -1765,7 +1768,7 @@ void EthStratumClient::onRecvSocketDataCompleted(
 
         // Extract received message and free the buffer
         std::string rx_message(
-            boost::asio::buffer_cast<const char*>(m_recvBuffer.data()), bytes_transferred);
+            static_cast<const char*>(m_recvBuffer.data().data()), bytes_transferred);
         m_recvBuffer.consume(bytes_transferred);
         m_message.append(rx_message);
 

@@ -249,7 +249,7 @@ void ApiServer::start()
     if (m_portnumber == 0)
         return;
 
-    tcp::endpoint endpoint(boost::asio::ip::address::from_string(m_address), m_portnumber);
+    tcp::endpoint endpoint(boost::asio::ip::make_address(m_address), m_portnumber);
 
     // Try to bind to port number
     // if exception occurs it may be due to the fact that
@@ -770,7 +770,7 @@ void ApiConnection::onRecvSocketDataCompleted(
     {
         // Extract received message and free the buffer
         std::string rx_message(
-            boost::asio::buffer_cast<const char*>(m_recvBuffer.data()), bytes_transferred);
+            static_cast<const char*>(m_recvBuffer.data().data()), bytes_transferred);
         m_recvBuffer.consume(bytes_transferred);
         m_message.append(rx_message);
 

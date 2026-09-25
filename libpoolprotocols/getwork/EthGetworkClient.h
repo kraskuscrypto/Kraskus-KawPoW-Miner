@@ -1,5 +1,7 @@
 #pragma once
 
+#include <chrono>
+#include <boost/asio/steady_timer.hpp>
 #include <boost/asio/bind_executor.hpp>
 #include <boost/asio/post.hpp>
 #include <boost/asio/strand.hpp>
@@ -65,7 +67,7 @@ private:
     Json::Value m_pendingJReq;
     std::chrono::time_point<std::chrono::steady_clock> m_pending_tstamp;
 
-    boost::asio::deadline_timer m_getwork_timer;  // The timer which triggers getWork requests
+    boost::asio::steady_timer m_getwork_timer;  // The timer which triggers getWork requests
 
     // seconds to trigger a work_timeout (overwritten in constructor)
     int m_worktimeout;

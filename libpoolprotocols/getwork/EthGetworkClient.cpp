@@ -72,7 +72,7 @@ void EthGetworkClient::connect()
     {
         // No need to use the resolver if host is already an IP address
         m_endpoints.push(boost::asio::ip::tcp::endpoint(
-            boost::asio::ip::address::from_string(m_conn->Host()), m_conn->Port()));
+            boost::asio::ip::make_address(m_conn->Host()), m_conn->Port()));
         send(m_jsonGetWork);
     }
 }
@@ -230,7 +230,7 @@ void EthGetworkClient::handle_read(
 
         // Get the whole message
         std::string rx_message(
-            boost::asio::buffer_cast<const char*>(m_response.data()), bytes_transferred);
+            static_cast<const char*>(m_response.data().data()), bytes_transferred);
         m_response.consume(bytes_transferred);
 
         // Empty response ?
@@ -403,7 +403,7 @@ void EthGetworkClient::processResponse(Json::Value& JRes)
         {
             cwarn << "Got " << _errReason << " from " << m_conn->Host() << ":"
                   << toString(m_conn->Port());
-            m_getwork_timer.expires_from_now(boost::posix_time::seconds(30));
+            m_getwork_timer.expires_after(std::chrono::seconds(30));
             m_getwork_timer.async_wait(
                 boost::asio::bind_executor(m_io_strand, boost::bind(&EthGetworkClient::getwork_timer_elapsed, this,
                     boost::asio::placeholders::error)));
@@ -433,7 +433,7 @@ void EthGetworkClient::processResponse(Json::Value& JRes)
                     if (m_onWorkReceived)
                         m_onWorkReceived(m_current);
                 }
-                m_getwork_timer.expires_from_now(boost::posix_time::milliseconds(m_farmRecheckPeriod));
+                m_getwork_timer.expires_after(std::chrono::milliseconds(m_farmRecheckPeriod));
                 m_getwork_timer.async_wait(
                     boost::asio::bind_executor(m_io_strand, boost::bind(&EthGetworkClient::getwork_timer_elapsed, this,
                         boost::asio::placeholders::error)));
