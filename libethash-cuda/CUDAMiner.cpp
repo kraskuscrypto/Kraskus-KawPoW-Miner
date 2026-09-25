@@ -57,6 +57,10 @@ bool CUDAMiner::initDevice()
     cudalog << "Using Pci Id : " << m_deviceDescriptor.uniqueId << " " << m_deviceDescriptor.cuName
             << " (Compute " + m_deviceDescriptor.cuCompute + ") Memory : "
             << dev::getFormattedMemory((double)m_deviceDescriptor.totalMemory);
+    // Kraskus fork engine-contract identity line (stable format; see docs/ENGINE-CONTRACT.md).
+    cudalog << "[kraskus] device " << m_deviceDescriptor.cuDeviceIndex << " pci "
+            << m_deviceDescriptor.cuPciAddress << " uuid " << m_deviceDescriptor.cuUuid << " name "
+            << m_deviceDescriptor.cuName << " cc " << m_deviceDescriptor.cuCompute;
 
     // Set Hardware Monitor Info
     m_hwmoninfo.deviceType = HwMonitorInfoType::NVIDIA;
@@ -338,6 +342,24 @@ void CUDAMiner::enumDevices(std::map<string, DeviceDescriptor>& _DevicesCollecti
                 (to_string(props.major) + "." + to_string(props.minor));
             deviceDescriptor.cuComputeMajor = props.major;
             deviceDescriptor.cuComputeMinor = props.minor;
+            {
+                // Kraskus fork: stable identity for the Universal Miner (docs/ENGINE-CONTRACT.md):
+                // full PCI address and the NVML-style UUID, so the runtime can cross-check the
+                // CUDA ordinal it passed against its own UUID/PCI identity map.
+                ostringstream pci;
+                pci << setw(8) << setfill('0') << hex << props.pciDomainID << ":" << setw(2)
+                    << props.pciBusID << ":" << setw(2) << props.pciDeviceID << ".0";
+                deviceDescriptor.cuPciAddress = pci.str();
+                ostringstream u;
+                u << "GPU-" << hex << setfill('0');
+                for (int b = 0; b < 16; b++)
+                {
+                    if (b == 4 || b == 6 || b == 8 || b == 10)
+                        u << "-";
+                    u << setw(2) << (unsigned)(unsigned char)props.uuid.bytes[b];
+                }
+                deviceDescriptor.cuUuid = u.str();
+            }
             CUDA_SAFE_CALL(cudaMemGetInfo(&deviceDescriptor.freeMemory, &deviceDescriptor.totalMemory));
             _DevicesCollection[uniqueId] = deviceDescriptor;
         }

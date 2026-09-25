@@ -170,6 +170,8 @@ struct DeviceDescriptor
     DeviceSubscriptionTypeEnum subscriptionType = DeviceSubscriptionTypeEnum::None;
 
     string uniqueId;     // For GPUs this is the PCI ID
+    string cuPciAddress; // Kraskus fork: full DDDDDDDD:BB:DD.F PCI address (engine contract)
+    string cuUuid;       // Kraskus fork: GPU-xxxxxxxx-... UUID as NVML reports it (engine contract)
     size_t totalMemory;  // Total memory available on device
     size_t freeMemory;   // Free memory available on device
     string name;         // Device Name
