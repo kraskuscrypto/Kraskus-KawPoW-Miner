@@ -1,4 +1,6 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.24)
+# Kraskus fork: CMake 4.x removed <3.5 compatibility; the vendored cable/Hunter modules still
+# declare old minimums, so builds pass -DCMAKE_POLICY_VERSION_MINIMUM=3.5 (docs/KRASKUS-BUILD.md).
 
 include(cmake/cable/bootstrap.cmake)
 
@@ -19,8 +21,17 @@ HunterGate(
 	LOCAL
 )
 
-project(kawpowminer)
-set(PROJECT_VERSION 1.2.4)
+project(kawpowminer LANGUAGES C CXX)
+# Kraskus fork version (numeric MAJOR.MINOR.PATCH; MAJOR follows docs/ENGINE-CONTRACT.md).
+set(PROJECT_VERSION 1.3.0)
+set(KRASKUS_ENGINE_CONTRACT_VERSION 1)
+
+# Reproducible binaries: no absolute-path-dependent timestamps in the linked output.
+if (MSVC)
+	add_link_options(/Brepro)
+else()
+	add_link_options(-Wl,--build-id=sha1)
+endif()
 
 cable_set_build_type(DEFAULT Release CONFIGURATION_TYPES Release RelWithDebInfo)
 

@@ -1,0 +1,74 @@
+name: build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+
+jobs:
+  linux:
+    name: linux-x64 (CUDA ${{ matrix.cuda }})
+    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        cuda: ["12.4.1", "12.8.1"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Jimver/cuda-toolkit@v0.2.19
+        id: cuda
+        with:
+          cuda: ${{ matrix.cuda }}
+          method: network
+          sub-packages: '["nvcc", "cudart", "nvrtc", "nvrtc-dev"]'
+      - name: configure
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DETHASHCUDA=ON -DETHASHCL=OFF -DAPICORE=ON \
+                -DCMAKE_POLICY_VERSION_MINIMUM=3.5 -DCMAKE_CUDA_COMPILER="${{ steps.cuda.outputs.CUDA_PATH }}/bin/nvcc"
+      - name: build
+        run: cmake --build build --config Release --parallel
+      - name: smoke
+        run: ./build/kawpowminer/kawpowminer --version && ./build/kawpowminer/kawpowminer --help | head -5
+      - name: package
+        run: |
+          V=$(grep -m1 'set(PROJECT_VERSION' CMakeLists.txt | sed 's/[^0-9.]//g')
+          D=kraskus-kawpowminer-$V; mkdir -p dist/$D && cp build/kawpowminer/kawpowminer dist/$D/
+          (cd dist && tar czf kraskus-kawpowminer-$V-linux-x64-cuda${{ matrix.cuda }}.tar.gz $D && sha256sum *.tar.gz > SHA256SUMS-linux-cuda${{ matrix.cuda }})
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-x64-cuda${{ matrix.cuda }}
+          path: dist/*
+
+  windows:
+    name: windows-x64 (CUDA 12.8)
+    runs-on: windows-2022
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Jimver/cuda-toolkit@v0.2.19
+        id: cuda
+        with:
+          cuda: "12.8.1"
+          method: network
+          sub-packages: '["nvcc", "cudart", "nvrtc", "nvrtc_dev", "visual_studio_integration"]'
+      - name: configure
+        shell: cmd
+        run: cmake -S . -B build -G "Visual Studio 17 2022" -A x64 -DETHASHCUDA=ON -DETHASHCL=OFF -DAPICORE=ON -DCMAKE_POLICY_VERSION_MINIMUM=3.5
+      - name: build
+        shell: cmd
+        run: cmake --build build --config Release --parallel
+      - name: smoke
+        shell: cmd
+        run: build\kawpowminer\Release\kawpowminer.exe --version
+      - name: package
+        shell: pwsh
+        run: |
+          $v = (Select-String -Path CMakeLists.txt -Pattern 'set\(PROJECT_VERSION ([0-9.]+)\)').Matches[0].Groups[1].Value
+          $d = "kraskus-kawpowminer-$v"; New-Item -ItemType Directory -Force dist/$d | Out-Null
+          Copy-Item build/kawpowminer/Release/kawpowminer.exe dist/$d/
+          Compress-Archive -Path dist/$d -DestinationPath dist/kraskus-kawpowminer-$v-windows-x64.zip
+          (Get-FileHash dist/*.zip -Algorithm SHA256 | ForEach-Object { "$($_.Hash.ToLower()) *$(Split-Path $_.Path -Leaf)" }) | Set-Content dist/SHA256SUMS-windows
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-x64
+          path: dist/*

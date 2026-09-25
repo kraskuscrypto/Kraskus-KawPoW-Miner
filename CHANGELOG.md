@@ -1,3 +1,11 @@
+## 1.3.0 (Kraskus fork, in progress, 2026-09-25)
+
+- Forked from RavenCommunity/kawpowminer 1.2.4 (`632f6ea`, 2021-06-15). GPL-3.0 unchanged. No fee.
+- Build: CMake >= 3.24; explicit `KRASKUS_CUDA_ARCHS` (61,70,75,80,86,89,90 + 100,120 on CUDA >= 12.8) with PTX for the highest; reproducible link flags.
+- NVRTC: runtime ProgPoW kernel target clamped to the highest architecture the installed NVRTC supports (newer GPUs JIT from PTX instead of failing).
+- Docs: UPSTREAM.md, AGENTS.md, docs/ENGINE-CONTRACT.md, docs/KRASKUS-BUILD.md, docs/RELEASE.md; CI for linux-x64 (CUDA 12.4 and 12.8) and windows-x64 (CUDA 12.8) with hashed artefacts.
+- Pending: device identity line (`[kraskus] device ...`), contract tests, RTX 3070 Ti qualification.
+
 # Changelog
 
 All notable changes to this project will be documented in this file.

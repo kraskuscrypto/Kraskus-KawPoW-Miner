@@ -398,7 +398,35 @@ void CUDAMiner::compileKernel(uint64_t period_seed, uint64_t dag_elms, CUfunctio
         NULL));                                // includeNames
 
     NVRTC_SAFE_CALL(nvrtcAddNameExpression(prog, name));
-    std::string op_arch = "--gpu-architecture=compute_" + to_string(m_deviceDescriptor.cuComputeMajor) + to_string(m_deviceDescriptor.cuComputeMinor);
+    // Kraskus fork: never ask NVRTC for an architecture newer than it knows. The device's
+    // compute capability is clamped to the highest architecture the installed NVRTC supports
+    // (nvrtcGetSupportedArchs, CUDA >= 11.2); the driver JIT-compiles that PTX for the GPU.
+    int requested = m_deviceDescriptor.cuComputeMajor * 10 + m_deviceDescriptor.cuComputeMinor;
+    int target = requested;
+    {
+        int numArchs = 0;
+        if (nvrtcGetNumSupportedArchs(&numArchs) == NVRTC_SUCCESS && numArchs > 0)
+        {
+            std::vector<int> archs(numArchs);
+            if (nvrtcGetSupportedArchs(archs.data()) == NVRTC_SUCCESS)
+            {
+                int best = 0;
+                for (int a : archs)
+                    if (a <= requested && a > best)
+                        best = a;
+                if (best == 0)
+                    best = archs.front();
+                if (best != requested)
+                {
+                    cwarn << "NVRTC does not support compute_" << requested
+                          << "; compiling the ProgPoW kernel for compute_" << best
+                          << " (driver JIT). Install a newer CUDA toolkit for native code.";
+                    target = best;
+                }
+            }
+        }
+    }
+    std::string op_arch = "--gpu-architecture=compute_" + to_string(target);
     std::string op_dag = "-DPROGPOW_DAG_ELEMENTS=" + to_string(dag_elms);
 
     const char* opts[] = {op_arch.c_str(), op_dag.c_str(), "-lineinfo"};

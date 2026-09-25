@@ -1,3 +1,20 @@
+# Kraskus-KawPoW-Miner
+
+Kraskus-maintained fork of [kawpowminer](https://github.com/RavenCommunity/kawpowminer)
+(GPL-3.0, no mining fee): the open, redistributable KawPoW engine for the
+[Kraskus Universal Miner](https://github.com/kraskuscrypto/Kraskus-Universal-Miner).
+
+- Provenance and license: [UPSTREAM.md](UPSTREAM.md) (forked at upstream commit `632f6ea`, v1.2.4).
+- What the Universal Miner relies on: [docs/ENGINE-CONTRACT.md](docs/ENGINE-CONTRACT.md).
+- Building it yourself, reproducibly: [docs/KRASKUS-BUILD.md](docs/KRASKUS-BUILD.md).
+- Releases, hashes and signatures: [docs/RELEASE.md](docs/RELEASE.md).
+- Targets: Pascal (GTX 1070), Ampere (RTX 3070 Ti, first qualification rig), Blackwell (RTX 5070); Windows x64 and Linux x64.
+- Status: **build modernization in progress (1.3.0)**; see CHANGELOG.md and `docs/qualification/`.
+
+The original upstream README follows.
+
+---
+
 # kawpowminer (ethminer fork with ProgPoW implementation)
 
 > kawpow miner with OpenCL, CUDA and stratum support
