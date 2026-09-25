@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <cstring>
+#include <cstdint>  // Kraskus fork: uint8_t
 #include <string>
 #include <type_traits>
 #include <vector>

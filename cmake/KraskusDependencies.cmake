@@ -69,6 +69,9 @@ if(NOT TARGET jsoncpp_lib_static)
 		message(FATAL_ERROR "jsoncpp static target not found")
 	endif()
 endif()
+# Upstream code includes <json/json.h> from libraries that do not link jsoncpp themselves
+# (Hunter used to expose it globally); keep that behaviour.
+include_directories(SYSTEM ${jsoncpp_SOURCE_DIR}/include)
 if(NOT TARGET CLI11::CLI11 AND TARGET CLI11)
 	add_library(CLI11::CLI11 ALIAS CLI11)
 endif()
