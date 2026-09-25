@@ -53,6 +53,14 @@ FetchContent_Declare(CLI11
 
 FetchContent_MakeAvailable(ethash jsoncpp CLI11)
 
+# ethash exports the ethash:: namespace only from its install config; as a subproject the
+# targets are plain `ethash` / `keccak`.
+if(NOT TARGET ethash::ethash AND TARGET ethash)
+	add_library(ethash::ethash ALIAS ethash)
+endif()
+if(NOT TARGET ethash::keccak AND TARGET keccak)
+	add_library(ethash::keccak ALIAS keccak)
+endif()
 if(NOT TARGET jsoncpp_lib_static)
 	# newer jsoncpp names the static target jsoncpp_static
 	if(TARGET jsoncpp_static)
