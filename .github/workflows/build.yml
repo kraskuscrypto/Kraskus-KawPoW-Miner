@@ -13,9 +13,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        cuda: ["12.4.1", "12.8.1"]
+        cuda: ["12.4.1", "12.8.0"]
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - uses: Jimver/cuda-toolkit@v0.2.19
         id: cuda
         with:
@@ -45,10 +47,12 @@ jobs:
     runs-on: windows-2022
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
       - uses: Jimver/cuda-toolkit@v0.2.19
         id: cuda
         with:
-          cuda: "12.8.1"
+          cuda: "12.8.0"
           method: network
           sub-packages: '["nvcc", "cudart", "nvrtc", "nvrtc_dev", "visual_studio_integration"]'
       - name: configure

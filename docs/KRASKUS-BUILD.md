@@ -13,7 +13,7 @@
 ## Commands
 
 ```bash
-git clone https://github.com/kraskuscrypto/Kraskus-KawPoW-Miner.git && cd Kraskus-KawPoW-Miner
+git clone --recurse-submodules https://github.com/kraskuscrypto/Kraskus-KawPoW-Miner.git && cd Kraskus-KawPoW-Miner   # cmake/cable is a submodule
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DETHASHCUDA=ON -DETHASHCL=OFF -DAPICORE=ON \
       -DKRASKUS_CUDA_ARCHS="61;70;75;80;86;89;90" -DCMAKE_POLICY_VERSION_MINIMUM=3.5
 cmake --build build --config Release --parallel
