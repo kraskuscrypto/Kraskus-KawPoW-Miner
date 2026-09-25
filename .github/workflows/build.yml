@@ -38,7 +38,13 @@ jobs:
       - name: build
         run: cmake --build build --config Release --parallel
       - name: smoke
-        run: ./build/kawpowminer/kawpowminer --version && ./build/kawpowminer/kawpowminer --help | head -5
+        # CI runners have no NVIDIA driver, so the binary (which links the CUDA driver API) cannot
+        # start there; check its dynamic dependencies instead and run --version only when a
+        # driver is present.
+        run: |
+          ldd build/kawpowminer/kawpowminer | tee ldd.txt
+          if grep "not found" ldd.txt | grep -vqE "libcuda\.so|libnvidia"; then echo "unexpected missing library"; exit 1; fi
+          if ldconfig -p | grep -q libcuda.so.1; then ./build/kawpowminer/kawpowminer --version; else echo "no NVIDIA driver on this runner; --version skipped"; fi
       - name: package
         run: |
           V=$(grep -m1 'set(PROJECT_VERSION' CMakeLists.txt | sed 's/[^0-9.]//g')
@@ -73,8 +79,14 @@ jobs:
         shell: cmd
         run: cmake --build build --config Release --parallel
       - name: smoke
-        shell: cmd
-        run: build\kawpowminer\Release\kawpowminer.exe --version
+        shell: pwsh
+        # No NVIDIA driver (nvcuda.dll) on CI runners: only check the artefact exists and its size.
+        run: |
+          $exe = "build/kawpowminer/Release/kawpowminer.exe"
+          if (-not (Test-Path $exe)) { throw "binary missing" }
+          "size: $((Get-Item $exe).Length) bytes"
+          if (Test-Path "$env:SystemRoot\System32
+vcuda.dll") { & $exe --version } else { "no NVIDIA driver on this runner; --version skipped" }
       - name: package
         shell: pwsh
         run: |

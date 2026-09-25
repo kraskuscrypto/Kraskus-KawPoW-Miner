@@ -4,7 +4,8 @@
 - Build: Hunter removed (its pinned Boost 1.70 no longer compiles); Boost from a prefix/system, cpp-kawpow 1.1.0 (KawPoW-patched ethash) / jsoncpp 1.8.4 / CLI11 1.8.0 fetched by CMake at upstream's pinned versions; CUDA through CMake's native language support (FindCUDA removed); C++17. CMake >= 3.24; explicit `KRASKUS_CUDA_ARCHS` (61,70,75,80,86,89,90 + 100,120 on CUDA >= 12.8) with PTX for the highest; reproducible link flags.
 - NVRTC: runtime ProgPoW kernel target clamped to the highest architecture the installed NVRTC supports (newer GPUs JIT from PTX instead of failing).
 - Docs: UPSTREAM.md, AGENTS.md, docs/ENGINE-CONTRACT.md, docs/KRASKUS-BUILD.md, docs/RELEASE.md; CI for linux-x64 (CUDA 12.4 and 12.8) and windows-x64 (CUDA 12.8) with hashed artefacts.
-- Pending: device identity line (`[kraskus] device ...`), contract tests, RTX 3070 Ti qualification.
+- Qualification on the RTX 3070 Ti rig (simulation mode): 35.26 MH/s, 4/4 solutions verified, identical to upstream 1.2.4 on the same GPU (`docs/qualification/1.3.0/`). Defect fixed on the way: the CPU verifier must use cpp-kawpow, not plain ethash.
+- Pending: device identity line (`[kraskus] device ...`), contract tests, real-pool shares (RVN address needed), Windows GPU run, GTX 1070 / RTX 5070 gates.
 
 # Changelog
 
