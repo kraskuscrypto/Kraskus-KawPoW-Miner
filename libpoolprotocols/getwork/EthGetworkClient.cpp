@@ -3,6 +3,8 @@
 #include <chrono>
 
 #include <ethash/ethash.hpp>
+#include <boost/bind/bind.hpp>
+using namespace boost::placeholders;  // Kraskus fork: Boost >= 1.73 no longer exposes _1/_2 globally
 
 using namespace std;
 using namespace dev;

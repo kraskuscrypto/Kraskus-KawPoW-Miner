@@ -15,6 +15,7 @@
     along with kawpowminer.  If not, see <http://www.gnu.org/licenses/>.
 */
 
+#include <cstdint>  // Kraskus fork: CLI11 1.8.0 uses uint64_t without including it
 #include <CLI/CLI.hpp>
 
 #include <kawpowminer/buildinfo.h>
