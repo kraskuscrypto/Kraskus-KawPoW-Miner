@@ -101,3 +101,31 @@ jobs:
         with:
           name: windows-x64
           path: dist/*
+
+  release:
+    name: release (tags only)
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [linux, windows]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: collect and hash
+        run: |
+          mkdir -p release
+          # The CUDA 12.4 build is the release Linux binary (sm_61..sm_90 + PTX; Blackwell JITs via
+          # the NVRTC clamp); the CUDA 12.8 build is kept as a separate, clearly named artefact.
+          V=${GITHUB_REF_NAME#v}
+          cp artifacts/linux-x64-cuda12.4.1/kraskus-kawpowminer-$V-linux-x64-cuda12.4.1.tar.gz release/kraskus-kawpowminer-$V-linux-x64.tar.gz
+          cp artifacts/linux-x64-cuda12.8.0/kraskus-kawpowminer-$V-linux-x64-cuda12.8.0.tar.gz release/kraskus-kawpowminer-$V-linux-x64-cuda12.8.tar.gz
+          cp artifacts/windows-x64/kraskus-kawpowminer-$V-windows-x64.zip release/
+          (cd release && sha256sum * > SHA256SUMS && cat SHA256SUMS)
+      - name: github release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" release/* --title "kraskus-kawpowminer $GITHUB_REF_NAME" --notes "Kraskus fork of kawpowminer (GPL-3.0, no fee). Source: this tag. Hashes: SHA256SUMS. See docs/RELEASE.md and docs/qualification/." --verify-tag
