@@ -6,7 +6,7 @@
 - Docs: UPSTREAM.md, AGENTS.md, docs/ENGINE-CONTRACT.md, docs/KRASKUS-BUILD.md, docs/RELEASE.md; CI for linux-x64 (CUDA 12.4 and 12.8) and windows-x64 (CUDA 12.8) with hashed artefacts.
 - Qualification on the RTX 3070 Ti rig (simulation mode): 35.26 MH/s, 4/4 solutions verified, identical to upstream 1.2.4 on the same GPU (`docs/qualification/1.3.0/`). Defect fixed on the way: the CPU verifier must use cpp-kawpow, not plain ethash.
 - Engine contract: `[kraskus] device <ordinal> pci <addr> uuid <GPU-...> name <...> cc <cc>` identity line (matches nvidia-smi on the rig); `test/contract/run.sh` (10/10 on the RTX 3070 Ti).
-- Windows: vcpkg manifest (`vcpkg.json`) pinned to baseline 2024.11.16 = Boost 1.86.0 / OpenSSL 3.4.0, static x64. Debt: port the pool/API clients off the deprecated Asio APIs (`strand::wrap`, `io_service`, `resolver::iterator`) before moving to Boost 1.87+.
+- Boost.Asio port: pool clients (stratum, getwork), API server, farm and CLI now use `io_context`, `strand<io_context::executor_type>`, `bind_executor`, `boost::asio::post` and the resolver `results_type` API (required by Boost >= 1.87). Windows: vcpkg manifest (`vcpkg.json`) pinned to a current baseline (Boost 1.92.0 / OpenSSL 3.6.4), static x64.
 - Pending: real-pool shares (RVN address needed), Windows GPU run, GTX 1070 / RTX 5070 gates.
 
 # Changelog
