@@ -12,12 +12,17 @@ include(CableToolchains)
 # Kraskus fork: Hunter (the upstream package manager, pinned to Boost 1.70) cannot build with
 # current compilers; dependencies now come from cmake/KraskusDependencies.cmake (Boost from a
 # prefix or the system, ethash/jsoncpp/CLI11 fetched at their upstream-pinned versions).
-cable_configure_toolchain(DEFAULT cxx17)
+cable_configure_toolchain(DEFAULT cxx11)
 
 project(kawpowminer LANGUAGES C CXX)
 # Kraskus fork version (numeric MAJOR.MINOR.PATCH; MAJOR follows docs/ENGINE-CONTRACT.md).
 set(PROJECT_VERSION 1.3.0)
 set(KRASKUS_ENGINE_CONTRACT_VERSION 1)
+
+# Current Boost and compilers: C++17 (cable's toolchain only knows cxx11; override after project()).
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Reproducible binaries: no absolute-path-dependent timestamps in the linked output.
 if (MSVC)
