@@ -31,8 +31,16 @@
 #include <boost/dll.hpp>
 #include <boost/filesystem.hpp>
 // Kraskus fork: Boost.Process v1 explicitly (Boost >= 1.88 makes <boost/process.hpp> v2,
-// which has no spawn()); only used by the reboot.sh/reboot.bat hook below.
+// which has no spawn()); only used by the reboot.sh/reboot.bat hook below. Boost < 1.86 has
+// no v1.hpp / v1 namespace, so alias whichever spelling this Boost provides.
+#include <boost/version.hpp>
+#if BOOST_VERSION >= 108600
 #include <boost/process/v1.hpp>
+namespace kraskus_process = boost::process::v1;
+#else
+#include <boost/process.hpp>
+namespace kraskus_process = boost::process;
+#endif
 
 #include <json/json.h>
 

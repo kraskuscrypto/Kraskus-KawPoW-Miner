@@ -14,6 +14,10 @@ include(CableToolchains)
 # prefix or the system, ethash/jsoncpp/CLI11 fetched at their upstream-pinned versions).
 cable_configure_toolchain(DEFAULT cxx11)
 
+# Kraskus fork: on MSVC link the static CRT (/MT) to match the static vcpkg triplet
+# (x64-windows-static builds Boost/OpenSSL with /MT); applies to CUDA host code as well.
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+
 project(kawpowminer LANGUAGES C CXX)
 # Kraskus fork version (numeric MAJOR.MINOR.PATCH; MAJOR follows docs/ENGINE-CONTRACT.md).
 set(PROJECT_VERSION 1.3.0)
