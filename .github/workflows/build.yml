@@ -1,5 +1,10 @@
 name: build
 
+env:
+  # Hunter's nested CMake runs (gate + packages) declare pre-3.5 minimums; CMake >= 3.31
+  # honours this as an environment variable so every nested configure inherits it.
+  CMAKE_POLICY_VERSION_MINIMUM: "3.5"
+
 on:
   push:
     branches: [main]
